@@ -1,0 +1,253 @@
+---
+title: "Final Project Draft"
+author: "Grant Warren, Erik Tollefsrud, Isabel An, Varsha Bhandari"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.height = 3)
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(scales)
+source("../../scripts/viridis.R")
+```
+
+### Discussion Group 318-C
+
+**Introduction**
+
+“Two possibilities exist: either we are alone in the Universe or we are not. Both are equally terrifying.” - Arthur Clarke
+
+Since the invention of radio in the 1900's, the search for extraterrestrial life has become a cultural phenomenon, giving rise to the quote above as a response to perhaps one of the most important questions for humanity: are we alone in the Universe? While it is impossible to know for certain with today's technology, we can still speculate on the possibility of intelligent life beyond Earth. 
+
+In 1961, Dr. Frank Drake created what is known as the "Drake Equation", which is an equation meant to estimate the number of active, communicative extraterrestrial civilizations in the Milky Way. This was not meant to be proof for the exact number of civilizations or even proof that life exists elsewhere in the Universe, but was primarily meant to be an approximation and a means of starting a discussion. While he did estimate a number in 1961, there have been numerous updates to some of the parameters since then, and the results have varied wildly. We will be attempting our own approximation.
+
+Specifically, we will be examining the question of planet habitability. Using a sample of exoplanets, can we estimate the likelihood that a planet will be habitable? Furthermore, can we use this approximation along with the other known values of the Drake Equation to produce a confidence interval for $N$, the possible number of advanced civilizations in the Milky Way?
+
+Given the seemingly infinite vastness of the Universe, even within the Milky Way, we believe that the number of intelligent, extraterrestrial civilizations must be at least one. We do not believe that we are alone in the Universe.
+
+**Research Questions**
+
+1. Using these confidence intervals and the various assumptions for the probability that intelligent life will develop on a habitable planet, what are the maximum and minimum values for N in the Drake equation that we can theorize? In other words, based on our parameters, what is the possible range for the number of advanced civilizations that exist?
+
+2. How confident can we be in the probability that a planet in the Milky Way is deemed habitable? How many planets fall inside the range of the projected “habitable zone”?
+
+3. Does the presence of H2O molecules on the planet correspond with the planet falling within the habitable zone?
+
+4. How does our own projected value for $N$ in the Drake Equation, compare with what has already been published?
+
+**Background**
+
+The Drake Equation: $N = R_* * f_p * n_e * f_1 * f_i * f_c * L$ ^[https://exoplanets.nasa.gov/news/1350/are-we-alone-in-the-universe-revisiting-the-drake-equation/]
+
+$N$ = The number of civilizations in the Milky Way galaxy whose electromagnetic emissions are detectable.
+$R_*$ = The rate of formation of stars suitable for the development of intelligent life (number per year).
+$f_p$ = The fraction of those stars with planetary systems.
+$n_e$ = The number of planets, per solar system, with an environment suitable for life.
+$f_1$ = The fraction of suitable planets on which life actually appears.
+$f_i$ = The fraction of life bearing planets on which intelligent life emerges.
+$f_c$ = The fraction of civilizations that develop a technology that produces detectable signs of their existence.
+$L$ = The average length of time such civilizations produce such signs (years).
+
+Most of the data we will be using is centered around the variable $n_e$ in the Drake Equation, or the average number of habitable planets in a given solar system. We will be exploring what makes a planet habitable, and using the data on the discovered exoplanets, we will model the estimated number of habitable planets. 
+
+The data for this project comes from the Extrasolar Planets Encyclopaedia, which is a comprehensive dataset of all confirmed exoplanets from various sources such as the Kepler space telescope. The citation can be found below in the references. There are six specific variables that we will be examining to determine planet habitability.
+
+1. mass - mass of the exoplanet, in Earth masses.
+2. radius - radius of the exoplanet, in Earth radii.
+3. eccentricity - The eccentricity of the planet's orbit, where 0 is a perfect circle.
+4. star_mass - mass of the star, in solar masses.
+5. semi_major_axis - The semi-major axis of the planet's orbit, or the max distance between the star and exoplanet, in AU (the distance between the Sun and Earth).
+6. molecules - any detected molecules on the exoplanet. Specifically, we will be looking for the detection of H2O, or water.
+
+To determine planet habitability, we will be examining three specific criteria related to the variables listed above. 
+
+1. The "Goldilocks Zone" - For life to develop, planets need water in its liquid form. This means that planets must maintain a very specific temperature range, and thus must exist at a certain distance from a star depending on its size to stay in this temperature range. ^[http://ircamera.as.arizona.edu/NatSci102/NatSci102/lectures/habzone.htm] ^[https://www.nasa.gov/mission_pages/kepler/news/kepler20130717.html]
+2. Orbit Shape - Temperature is critical. Not just average temperature, but the extremes as well. If the planet's orbit is too much of an ellipse, then the planet would only be habitable part of the year due to the massive difference in orbital distances from the planet's star, resulting in a large variance in temperature. ^[http://ircamera.as.arizona.edu/NatSci102/NatSci102/lectures/habzone.htm]
+3. Planet Size - There are several reasons as to why, but for a planet to be suitable it needs to have a specific mass to radius ratio. The most important reason is surface composition, specifically that the planet needs to be capable of holding liquid water, meaning it needs a rocky surface. This is only feasible if the planet is compact enough, or in other words is reasonably close to the Earth in its mass to radius ratio. ^[http://ircamera.as.arizona.edu/NatSci102/NatSci102/lectures/habzone.htm]
+
+**Analysis**
+
+We can start by taking in the list of all discovered exoplanets in our data set, and picking out the categories that we wish to look at. Out of the 4374 exoplanets, we need to narrow that down further since we will need the planets that we look at to have a complete data set, which means dropping the NA values. This leaves us with a sample of 265 planets to examine. ^[https://www.kaggle.com/eduardowoj/exoplanets-database]
+
+```{r include=FALSE}
+#Data read-in and initiation.
+
+exoplanet_database <- read.csv("../../data/exoplanet_database.csv")
+
+exoplanet_database <- exoplanet_database %>% 
+  select(X..name, mass, radius, eccentricity, star_mass, semi_major_axis, star_age, molecules, k) %>% 
+  rename(name = X..name) %>%
+  drop_na %>% 
+  mutate(has_water = case_when(str_detect(molecules, "H2O") ~ TRUE, TRUE ~ FALSE)) 
+
+head(exoplanet_database)
+
+```
+With our sample of 265 planets, we can begin filtering them into various lists based on the criteria. Again, we are looking for planets that meet all of the following.
+
+1. Exist in the Goldilocks zone, and the star must be acceptable.
+2. Star must be acceptable size for longevity, and long lifespan.
+3. Suitable planet radius/size relationship.
+4. Circular orbit.
+
+First, we can filter the planets that exist inside the Goldilocks Zone. This zone refers to planets that orbit their stars at the correct distance based on the size of the star and distance of the orbit. Heat dissipates over distance, so planets need to be within a certain range such that their temperatures will be within the range needed for water to keep at its liquid form. The most important precursor to a planet being habitable is water being able to exist on the planet as a liquid, which means the planet cannot be too cold or too hot. It is also important to emphasize that time is a requirement. Planets and the solar systems they reside in must be able to exist for millions or billions of years for life to potentially develop, which means the star specifically needs to fulfill certain requirements. ^[http://ircamera.as.arizona.edu/NatSci102/NatSci102/lectures/habzone.htm]
+
+$M_\text{star}/M_\text{planet} : \text{Axis}$ - This ratio must be reasonably close to 1:1, or in other words must be close to the ratio seen by the Sun and Earth.
+$M_\text{star} < 2$ - If the star is more than twice the size of the Sun, it will not last long enough to enable an orbiting planet to potentially develop life.
+
+The planets that lie within the habitable zone are marked as blue, with the blue lines representing the estimate of the habitable zone. Out of the 265 planet sample, 44 are within the habitable zone.
+
+```{r echo=FALSE}
+
+#Goldilocks Zone filtering and list.
+
+star_data <- exoplanet_database %>% 
+  filter(star_mass < 2) %>% 
+  filter(abs((star_mass/mass)/semi_major_axis) < 10) %>% 
+  filter(abs((star_mass/mass)/semi_major_axis) > 0.1)
+
+ggplot() +
+  geom_point(data = exoplanet_database, mapping = aes(y = star_mass/mass, x = semi_major_axis), color = "red") +
+  geom_point(data = star_data, mapping = aes(y = star_mass/mass, x = semi_major_axis), color = "blue", size = 2) +
+  geom_abline(intercept = 1, slope = 1, color = "blue") +
+  geom_abline(intercept = -1, slope = 1, color = "blue") +
+  scale_y_log10() +
+  scale_x_log10() +
+  labs(x = "Max Distance from Star", y = "Ratio of Star Mass to Planet Mass", title = "Planets resisiding in the Goldilocks Zone") +
+  theme_bw()
+
+```
+
+
+Next we look at planets that have a suitable relationship between planet radius and mass. Planets too large will end up being gas giants like Jupiter, have a risk of imploding on themselves, or will have too strong of a gravitational pull and constantly attract asteroids. The conservative estimate for the acceptable range of a habitable planet's size and radius is below. ^[http://phl.upr.edu/projects/habitable-exoplanets-catalog]
+
+$0.1 > M_\text{planet} > 5$
+$0.5 > R_\text{planet} > 1.5$
+
+The planets that meet the mass and radius requirements are marked as blue on the graph. Out of the 265 planet sample, 160 have an acceptable mass and radius.
+
+```{r echo=FALSE}
+
+#Planet mass and radius relationship 
+
+conservative_planet_data <- exoplanet_database %>% 
+  filter(radius >= 0.5 & radius <= 1.5) %>% 
+  filter(mass >= 0.1 & mass <= 5)
+
+ggplot() +
+  geom_point(data = exoplanet_database, mapping = aes(x = mass, y = radius), color = "red") +
+  geom_point(data = conservative_planet_data, mapping = aes(x = mass, y = radius), color = "blue") +
+  scale_x_log10() +
+  labs(x = "Planet Mass", y = "Planet Radius", title = "Planet Mass v Radius")
+
+```
+
+Finally, we need to look at the shape of the orbit. Planets with too elliptical of an orbit will vary far too much in distance from the star, which means temperatures that will fluctuate wildly outside of acceptable levels. It does not matter if a planet is "habitable" for a month if the next 20 months are uninhabitable. ^[http://ircamera.as.arizona.edu/NatSci102/NatSci102/lectures/habzone.htm]
+
+$\text{eccentricity} <= 0.02$ - The Earth's orbit is at 0.0167, so we extend that out another ~20% to get an estimate for the acceptable orbit range.
+
+The planets that meet the eccentricity requirements are marked as blue on the graph. Out of the 265 planet sample, 107 have an acceptable orbit.
+
+```{r echo=FALSE}
+
+orbit_data <- exoplanet_database %>% 
+  filter(eccentricity <= 0.02)
+
+ggplot() +
+  geom_bar(data = exoplanet_database, mapping = aes(x = eccentricity), color = "red") +
+  geom_bar(data = orbit_data, mapping = aes(x = eccentricity), color = "blue") +
+  labs(x = "Eccentricity of the Planet's Orbit", y = "Frequency", title = "Eccentricitiy Frequencies") 
+
+```
+
+Now that we have our filtered planets, we can check the overlap on the lists. By combining the lists we can see that there are 9 planets out of the original 265 that overlap, meeting all of the criteria. This gives us a probability that a planet will be habitable of $\hat{p} = 9/265$, or $\hat{p} = 0.03396$. In other words, based on our sample, we observed that the chance a planet will be deemed habitable is 3.40%.
+
+The planets that meet all of our criteria are marked as green on the graph, with the planets only in the habitable zone marked as blue. Out of the 265 planets in our sample, 9 met all of our criteria.
+
+```{r echo=FALSE}
+
+#final list of planets that meet the basic criteria to be considered potentially habitable
+
+habitable_planets <- intersect(orbit_data, conservative_planet_data)
+habitable_planets <- intersect(habitable_planets, star_data)
+
+habitable_planets
+
+ggplot() +
+  geom_point(data = exoplanet_database, mapping = aes(y = star_mass/mass, x = semi_major_axis), color = "red") +
+  geom_point(data = star_data, mapping = aes(y = star_mass/mass, x = semi_major_axis), color = "blue", size = 2) +
+  geom_point(data = habitable_planets, mapping = aes(y = star_mass/mass, x = semi_major_axis), color = "green", size = 2) +
+  geom_abline(intercept = 1, slope = 1, color = "blue") +
+  geom_abline(intercept = -1, slope = 1, color = "blue") +
+  scale_y_log10() +
+  scale_x_log10() +
+  labs(x = "Max Distance from Star", y = "Ratio of Star Mass to Planet Mass", title = "Planets resisiding in the Goldilocks Zone", subtitle = "With Planets Deemed Habitable in Green")
+
+```
+We also can see if there is any overlap between planets that are known to contain water and the planets we deemed as habitable. There is no overlap here, but this was a longshot to begin with since very few planets have any recorded molecules, with only seven total planets marked as having water. To be clear this does not mean the water is liquid either, just that H2O is present as a molecule.
+
+The planets that meet all of our criteria are marked as green on the graph. Planets with water are marked as blue, and planets with only the correct mass/radius ratio are marked as red.
+
+```{r echo=FALSE}
+
+water_data <- exoplanet_database %>% 
+  filter(has_water)
+
+ggplot() +
+  geom_point(data = exoplanet_database, mapping = aes(x = mass, y = radius), color = "yellow") +
+  geom_point(data = conservative_planet_data, mapping = aes(x = mass, y = radius), color = "red") +
+  geom_point(data = habitable_planets, mapping = aes(x = mass, y = radius), color = "green", size = 2) +
+  geom_point(data = water_data, mapping = aes(x = mass, y = radius), color = "blue", size = 2) +
+  scale_x_log10() +
+  labs(x = "Planet Mass", y = "Planet Radius", title = "Planet Mass v Radius", subtitle = "Also Showing Habitable Planets in Green and Planets with Water in Blue")
+
+```
+
+**Discussion**
+
+Out of our sample size of 265, we found 9 planets that met our criteria and thus have the potential to be habitable. This would mean that $\hat{p} = 0.03396$. Lets assume that this is a universal probability for all planets. This would mean that the number of habitable planets follows a binomial distribution, and for our sample would be $\text{Binom}(265, 0.03396)$. By approximating this as a normal distribution, we can create a 95% confidence interval for what the true probability should be.
+
+$\text{Upper CI} = \hat{p} + z\sqrt{ \frac{\hat{p}(1-\hat{p})}{n}}$
+$\text{Lower CI} = \hat{p} - z\sqrt{ \frac{\hat{p}(1-\hat{p})}{n}}$
+
+$\hat{p} = 0.03396$, $n = 265$, and $z = 1.96$. This gives us a 95% confidence interval of 0.012152 to 0.055768, where we can say with 95% confidence that the true probability $p$ lies within that range. This allows us to create a similar confidence interval for the population of exoplanets. While the exact number of planets in the Milky Way is unknown, the current estimate is roughly 100,000,000,000.
+
+Using the probability range of [0.012152, 0.055768], this would give us a range of between 1,215,206,572 and 5,576,793,428 potentially habitable exoplanets in the Milky Way. So, our final estimate would be between 1.2 and 5.5 billion habitable planets. We can now use this to generate a range for what $N$ should be in the Drake Equation.
+
+There are several other variables in the drake equation, most of which are far too complex to estimate or calculate ourselves. We will use NASA's estimates for the extraneous variables. ^[https://en.wikipedia.org/wiki/Drake_equation#:~:text=Original%20estimates,-There%20is%20considerable&text=fp%20%3D%200.2%20to%200.5,which%20will%20develop%20intelligent%20life)]
+
+The Drake Equation: $N = R_* * f_p * n_e * f_1 * f_i * f_c * L$
+
+$R_*$ = 1.5 to 3 stars formed per year.
+$f_p$ = 1 - current estimates say that almost all stars have at least one planet.
+$n_e$ = 1.2 billion to 5.5 billion
+$f_1$ = 1 - This is contested, but basically if you give a habitable planet a few billion years, scientists seem to think it is extremely likely that life of some kind will develop.
+$f_i$ = This is the most controversial variable, since Earth is the only known case of intelligent life. We will use the lower, more conservative values here and say 1 in a billion, or 0.000000001.
+$f_c$ = 1 - again, hard to say, but we can basically say that it is likely.
+$L$ = 420 years as the average duration of a civilization. This is based on the history of humanity's various civilizations, with the modern age lasting a calculated 304 years.
+
+Using these values, we can calculate an upper and lower range for $N$.
+
+Lower range of $N$: 756
+Upper range of $N$: 6930
+
+As much as I would love to say that we can, with 95% certainty, estimate the number of communicative advanced civilizations to be between 756 and 6930, there are very obvious problems with this analysis that make this more of an intellectual exercise than a scientific deduction.
+
+First, $f_i$ is by far the biggest issue with this equation. Out of 100,000,000,000 planets in the Milky Way ^[https://nineplanets.org/questions/how-many-planets-are-in-the-milky-way/], only 1 has managed to develop intelligent life that we are aware of. It is much too complex of a topic and too widely contested for there to be any sort of consensus as to what the true value of $f_i$ should be. Second, our estimation of the number of habitable planets is obviously incomplete. We cannot say that every planet we filtered out was a habitable planet, only that they meet some of the most basic criteria that could make them habitable. In reality there are many other factors that are impossible to include in our calculations. For instance, some scientists have theorized that Earth only exists as it does because of its proximity to Jupiter - for life to develop, a planet needs to exist in a stable condition for potentially billions of years. This means that asteroids can't be striking the planet constantly, so having a much larger planet nearby to divert any asteroids is a huge advantage. This is only one example, but there are countless criteria as to what would make a planet habitable, both known and unknown. Our perceptions on what makes life possible are based entirely on Earth, which means there could be countless possibilities for life creation that we are unaware of.
+
+Even with just our criteria, the parameters we looked at are approximations at best. If a planet has a radius of 1.51 times Earth's radius that does not completely invalidate it compared to a planet with a 1.5 radius. There are complex issues, and most of what is reported by NASA and other scientists is educated guesswork for defining what makes a planet suitable for life.
+
+In the future, there are several topics we could address if we chose to revisit this project.
+
+1. We could examine other variables in the equation to dig deeper into the given values and the data behind them.
+2. More data with a bigger sample size. We only had access to just over 4000 planets, and only 265 planets with complete data. This does require that more exoplanets are discovered however.
+3. This whole project would be much easier if we could just discover intelligent life elsewhere in the Universe. Give us another 100 advanced civilizations in the Milky Way to work with and we could get a much more accurate estimate.
+
+**Conclusion**
+
+As we stated initially, the Drake Equation was meant to start a discussion in the scientific community at the time. Given the uncertainty in the variables and the ridiculously small sample size of data that we actually possess, it is impossible to get any accurate numbers out of the equation. We are still confident that the number of extraterrestrial advanced civilizations must be at least 1, and while our results do heavily support it, it is inconclusive for the reasons stated above. We can generate countless estimates, but until contact is actually made with another civilization, it will be impossible to know for sure if we are alone in the Universe.
+
+
+

@@ -1,0 +1,747 @@
+---
+title: "Helpful `R` Things (And Other Important Stuff)"
+output: 
+  html_document:
+    number_sections: true
+    highlight: tango
+---
+
+I'll be using the `mtcars` data set to show this stuff. It's included with `R` by default.
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+options(tidyverse.quiet = TRUE) # Disable the annoying messages when tidyverse loads
+
+library(tidyverse)
+`%notin%` <- Negate(`%in%`) # I'll explain this later
+
+data(mtcars) # This loads the mtcars data into the R environment.
+```
+
+I'll also be making extensive use of the `head()` function, which displays the first $m$ observations (default: $m=min\{n,6\}$) in a data object (like a vector or data frame). If you aren't familiar with it, here's an example.
+
+```{r}
+x <- 1:10
+x
+
+head(x)
+```
+
+# Update `R` and `tidyverse`
+
+## Check your `R` version
+
+I can tell that some of you are running older versions of `R`. Specifically, some of you are still using `R v3.6.xx`. 
+
+This is a problem because the latest versions of `tidyverse` are not compatible with `R v3.6.xx`, so you will be missing out on some functions used in this class. These include `slice_max()` and others. 
+
+Run the code below; if you have something lower than `R v4.xx.xx`, you should update. Be sure to save any other files you have open, and preferably close them.
+
+```{r}
+R.version.string
+```
+
+## Updating `R` (Windows)
+
+Run the lines of code below chunk-by-chunk withinin `RStudio`. The first installs a package, `installr`, that updates `R` for you. The second loads that package and runs the function to update `R`.
+
+```{r, eval=F}
+install.packages("installr")
+```
+
+The `updateR()` function in the chunk below will ask you some questions.
+
+- You can look at the `NEWS` or not; it doesn't matter.
+
+- Yes, you want to copy your old packages into your new version of `R`.
+
+- No, you do not want to erase packages in the old version of `R` (just to be safe).
+
+- Yes, you want to update your packages to the latest versions. If there's a problem with updating one of the packages, don't worry about it.
+
+- No, you don't want to open the `Rgui` of your new `R` installation.
+
+- Yes, you want to close the current session of your old `R`.
+
+```{r, eval=F}
+library(installr)
+
+updateR()
+```
+
+After the process completes, restart `RStudio` at the very least. You should probably just restart your computer to be safe.
+
+## Updating `R` (Mac)
+
+Note: I do not have a Mac, so I have personally never used this package. It is recommended as the update method for Mac users, so I'm sure it's safe. I also do not know how it handles updating or moving your current packages.
+
+[If you want more information, you can go to this webpage.](http://www.andreacirillo.com/2018/03/10/updater-package-update-r-version-with-a-function-on-mac-osx/)
+
+Be sure to enter your Mac OS admin password where it says `Admin user password` below, and be sure not to remove the quotation marks. 
+
+```{r, eval=F}
+install.packages('devtools')
+
+library(devtools)
+
+install_github('andreacirilloac/updateR')
+
+library(updateR)
+
+updateR(admin_password = 'Admin user password')
+```
+
+At the end of the installation, you should see `everything went smoothly open a Terminal session and run 'R' to assert that latest version was installed`. When you see this, you just restart `RStudio`; you should also probably restart your computer.
+
+# Blank spaces are very important.
+
+Note to future Michael: \*Insert Taylor Swift joke here to show that you're hip and cool.\*
+
+## Blank lines between paragraphs
+
+In `R markdown`, and `markdown` in general, you must have one blank line between paragraphs. That means you must press enter twice before you continue typing. This includes between text and an `R` chunk. This is a baseline necessity to make your final document readable.
+
+For example, look at the lines below. The character `|` signifies where `enter`(s) were inserted.
+
+--- --- ---
+
+There is one `enter` between this line |
+and this line. There is no blank line because I did not press `enter` twice.
+
+There are two `enter`s between this line |
+
+and this line. There is a blank line because I pressed `enter` twice like a good person.
+
+--- --- ---
+
+There is one `enter` between the end of this line and the header below. |
+#### This is a failed header because I did not press `enter` twice
+
+There are two `enter`s between the end of this line and the header below. |
+
+#### This is a beautiful, majestic header because I am a wonderful human being who pressed `enter` twice {-}
+
+## Blank spaces after paragraph formatting symbols
+
+Most *paragraph* formatting operators require a blank space between the formatting symbol and your text. This only applies to symbols that format entire paragraphs; in general, it does not apply to *text* formatting symbols like  `**`bold`**` and `*`italics`*`.
+
+--- --- ---
+
+If you're going to create a list with `-` or `*`, you have to put a space after the symbol for it to work.
+
+-This does not create a list.
+
+- This does create a list.
+
+--- --- ---
+
+If you want to create a header with `#`, you must have a space after the `#` character.
+
+###This header does not work
+
+### This header does work {-}
+
+--- --- ---
+
+# Display your work, don't just assign it to an object
+
+## Variable assignment does not display
+
+When you save something into an `R` object, `R` does not display it. Look at this. Notice how it does not display anything. 
+
+```{r}
+cars <- mtcars
+```
+
+Now imagine a question that said:
+
+> Print the first 8 observations in the `mtcars` data set.
+
+If you write the code below, have you done what the question asked?
+
+```{r}
+first8 <- cars %>%
+  slice(1:8)
+```
+
+**No, you have not.** The only thing you have done is create an `R` object that contains the correct observations. In order to print it, you must call the `R` object by name.
+
+```{r}
+first8 <- cars %>%
+  slice(1:8)
+
+first8
+```
+
+You can also use the `print()` function; this is (almost always) equivalent to just typing the variables name, so why bother with the extra typing?
+
+```{r}
+print(first8)
+```
+
+There's also the `show()` function. This function is usually the same as `print()`. But sometimes it's different. It's complicated; the technical difference comes from two of the three different object oriented (OO) coding systems with which `R` functions can be written (S3 and S4, specifically). 
+
+Just use `print()`. Or better yet, just call the object by name.
+
+## You must print your stuff
+
+From now on, if you are told make an object intended to show or summarize something, you must actually show it in the .html output to get full credit. Allow me to repeat for emphasis:
+
+<font size="5"> **From now on, if you are told make an object intended to show or summarize something, you must actually show it in the .html output to get full credit.** </font>
+
+This includes---but is not limited to---any question that asks you to list names, show observations that fulfill some condition, or display summary statistics. If you make a table, you should at least display the `head()` of it if you're unsure whether to show it.
+
+## `View()` is not a print function
+
+There are two types of "display" functions in `R`: print functions and data viewing functions.
+
+- Print functions display the contents of a data object in the console. In `RStudio`, print functions (by default) display the contents of a data object below the `R` chunk instead of displaying in the console (in fact, what is happening is that `RStudio` is treating the area below the chunk like a console with slightly fancier styling).
+
+- Data viewing functions display the contents of a data object in some specialized format *instead of* outputting to the console (or below an `RStudio` chunk). There aren't many of these, with `View()` being the most notable.
+
+The `View()` function pops up a new tab (or window) in `RStudio` that displays the data set in a spreadsheet format. Run the code below within `RStudio`, then remove `eval=F` (along with the comma) and look at what is shown in the knitted document.
+
+```{r, eval=F}
+View(cars)
+```
+
+You'll notice that nothing is displayed below the chunk in the knitted document. Inside of `RStudio`, nothing is shown below the chunk, either. That's because `View()` does not actually create any console output; it is not a print function, *it is a data viewing function that only shows the data to you in an `RStudio` tab or window*.
+
+Therefore, while using `View()` is very, very helpful when you're writing and debugging code, it does not actually do anything for the person reading your knitted document (AKA: me). Don't use `View()` to display your results. Just type the name of the data object on a new line.
+
+# `summarize()` vs. `mutate()`
+
+## `mutate()`
+
+You use `mutate()` when you want to (a) change the value of an existing column (or multiple existing columns), or (b) add a new column (or multiple new columns) to **every row of your original data set**. 
+
+- If your original data set has $n$ rows when you put it into `mutate()`, you will get a data set out with $n$ rows.
+
+```{r}
+nrow(mtcars) # 32 rows
+
+mutated_mtcars <- cars %>% 
+  mutate(mpg_plus_10 = mpg+10) # Just for illustrative purposes
+
+mutated_mtcars %>%
+  select(starts_with("mpg"), everything()) %>% # Only select()-ing to make it clearer 
+  head() # Show the first 6 observations so you can see that we've added a new column
+
+nrow(mutated_mtcars) # But we have not changed the number of rows
+```
+
+- If you call `group_by()` before `mutate()`, you will still get $n$ rows in the resulting data frame. However, the function in `mutate()` will be called on each `group_by()` group separately. In fact, **all** functions will be called on each group separately. For example, if I wanted to find the mean `mpg` for cars with different numbers of `cyl` (engine cylinders) and then pick the two cars with the highest `mpg` for each number of `cyl`, I can do that.
+
+```{r}
+cars %>%
+  group_by(cyl) %>%
+  mutate(mean=mean(mpg)) %>% # Find the mean mpg for each cyl group separately
+  select(cyl, mpg, mean) %>% # Only for display purposes
+  
+  # Notice that slice_max() is still being called on each group separately, 
+  #   so I get the top 2 mpgs for each cyl group (one group has a tie)
+  slice_max(mpg, n=2) 
+```
+
+
+--- ---
+
+## `summarize()`
+
+You use `summarize()` when you want to find **summary statistics**, which show you numerical representations of the relationship between multiple observations.
+
+- By default, `summarize()` will find summary statistics for all of your data. For example, if you call the `mean()` function on variable $X$ inside `summarize()`, `summarize()` will find the mean of $X$ across **all observations**, and return a one-row data frame that contains **only** the mean of $X$. In general, if you generate $p$ summary statistics, your resulting data frame will be $1 \times p$ by default.
+
+```{r}
+cars %>%
+  summarize(mean=mean(mpg))
+```
+
+- If you call `group_by()` with $\ell$ different grouping variables before `summarize()`, you will have a data frame with $k$ rows, where $k$ is the number of groups, $\ell$ columns for your grouping variables, and $p$ columns for your summary statistics. So the resulting data frame will be $k \times (p+\ell)$. Here, I group by $\ell=1$ variable with $k=3$ groups and find $p=1$ summary statistics.
+
+```{r}
+cars %>%
+  group_by(cyl) %>%
+  
+  # Ignore the .groups= argument, it just suppresses a new (annoying) warning message 
+  #    recently added to tidyverse
+  summarize(mean=mean(mpg), .groups="drop") 
+```
+
+- Finally, it is important to note that, as far as I am aware, *it is not possible to get back to your original data frame after a `summarize()` call*. That is, when you collapse down to the dimensions of the summary statistics data frame, you cannot return to your full-dimension data set in the same set of function calls. For this reason, it is important that you *never save the results of a `summarize()` call into the name of your original data object*. For example, this code (which is not going to be evaluated by `R`) would be a very bad idea.
+
+```{r, eval=F}
+cars <- cars %>%
+  summarize(mean=mean(mpg))
+```
+
+--- --- ---
+
+## What happens when you use one when you should use the other?
+
+- Notice what happens when I call `mutate()` on a summary statistic function without grouping. There *are* some uses for this type of `mutate()` call, but they're not super common.
+
+```{r}
+wrong_mutate <- cars %>%
+  mutate(mean=mean(mpg)) %>%
+  select(mpg, mean)
+
+# That's probably not what you wanted
+wrong_mutate %>% 
+  head()
+
+# Verifying that each row has the same value in the mean column
+wrong_mutate$mean==mean(cars$mpg)
+
+nrow(wrong_mutate)
+```
+
+- Similarly, when you call a `mutate()`-style operation inside `summarize()`, you might or might not still get $n$ rows back (depending on which function you call), but you will throw away every other column. You will *only* get back the column created in `summarize()`. Notice that I have not `select()`-ed away any columns here.
+
+```{r}
+wrong_summarize <- cars %>%
+  summarize(mpg_plus_10 = mpg+10) 
+
+wrong_summarize %>%
+  head()
+
+nrow(wrong_summarize)
+```
+
+# One `mutate()`/`summarize()`/`filter()` can do multiple things
+
+These functions (and most `dplyr` verbs in general) have the syntax `f(.var = .fun(...))`, where:
+
+- `f` is a `dplyr` verb like `mutate`, `summarize`, or `filter`
+
+- `.var` is a variable name
+
+  - In `mutate()`, the column you want to change or create
+  
+  - In `summarize()`, the name of the (new) summary statistic column that will be created in the output table
+  
+  - In `filter()`, the variable on which you are basing your filter
+  
+- `.fun(...)` is some other function call that takes arguments `...`
+
+  - In `mutate()` or `summarize()`, generally a function that returns a numeric or categorical value, such as `mean()`
+  
+  - `filter()` is more complicated. 
+  
+    - The `=` is replaced with a logical comparison operator (e.g., `==`, `%in%`, `!=`). 
+    
+    - After the comparison operator, you provide some value (or values) to check against `.var`'s value. 
+    
+    - The actual `.fun(...)` call happens (invisibly) behind the scenes and depends on which operator you're using. These functions always return one or more logical values (`TRUE` or `FALSE`).
+    
+    - For example, the `%in%` operator calls this function: `function(x, table) match(x, table, nomatch = 0) > 0`. Here `x` is `.var` and `table` is the value (or values) you write after `%in%`.
+
+The cool thing about `dplyr` verbs is that inside `f()`, you can have multiple `.var = .fun(...)` pairs. In `mutate()` and `summarize()`, they must be separated by commas.
+
+```{r}
+cars %>%
+  mutate(
+    # There is a comma after this .var = .fun(...) pair, so I can add another variable
+    mpg_group = ifelse(mpg>18, "high", "low"),
+    
+    # Notice that there is no comma after this .var = .fun(...) pair
+    #    because I have no other variables to create
+    is_cool = ifelse(hp>200, "yes", "no") 
+         ) %>%
+  select(mpg_group, is_cool, everything()) %>%
+  head(n=8)
+```
+
+Could I do this in multiple `mutate()` calls? Sure. But that makes me sad, and it's also so ugly that it makes babies cry. In the distance, sirens.
+
+```{r}
+cars %>%
+  # I will now call mutate() two separate times despite not needing
+  #    to because I am a nerd who should have my lunch money stolen
+  mutate(mpg_group = ifelse(mpg>18, "high", "low")) %>%
+  mutate(is_cool = ifelse(hp>200, "yes", "no")) %>%
+  select(mpg_group, is_cool, everything()) %>%
+  head(n=8)
+```
+
+Similarly, for `filter()`, instead of commas, you connect multiple conditions with logical operators (which are different from the logical **comparison** operators talked about above) like `&` ("and") or `|` ("or").
+
+```{r}
+cars %>%
+  filter(carb==4 & cyl==6)
+```
+
+# Don't `group_by()` (continuous) numeric variables. Ever.
+
+## Wrong and bad
+
+Let's look at the `qsec` column in the `mtcars` data. This variable is the time (in seconds) each car takes to drive 1/4 mile. As you can see, this variable is numeric and continuous.
+
+```{r}
+cars$qsec
+```
+
+```{r}
+# n = 32 
+length(cars$qsec)
+
+# Number of unique values = 30
+length(unique(cars$qsec))
+```
+
+Clearly, most cars have a unique quarter-mile time. Let's see what would happen if we were to `group_by()` this continuous numeric variable, then find the `min()` and `max()` of the `qsec` variable, as well as the number of cars $n$ in each group.
+
+```{r}
+cars %>%
+  group_by(qsec) %>%
+  summarize(min=min(qsec), max=max(qsec), n=n(),
+            .groups="drop") %>% # Again, ignore this .groups argument
+  head()
+```
+
+Well, that's... an almost totally useless `summarize()` call, isn't it? Since almost every group has only $n=1$ member, that one observation's value is both the `max` and `min` of that group. And its mean. And its median. These "summary" statistics don't summarize anything.
+
+In general, continuous numeric variables will tend to have unique values for almost every observation. So, when you `group_by()` a continuous numeric variable, you're effectively just performing operations on each row individually (for the most part)---that's just a `mutate()` function with extra steps and a lot more potential for error. 
+
+For example, if a few observations happen to have the same value of the variable, they will get grouped---that's hard to notice, and it's bad if you intended to perform an operation for each row individually (and you used the `summarize()` function to do so for... some reason).
+
+There's another downside, too: if you call `group_by()` and `summarize()` (instead of `mutate()`) to do that operation, you're throwing away every other variable in your data set in the process. That's how `summarize()` works. No good.
+
+## Less wrong, but still bad
+
+What if we wanted to put the data into groups based on their `qsec` values, and then perform some function on each group? For example, suppose we wanted to put cars in speed groups and then find the mean `hp` (horsepower) of one (or both) groups. Let's say we put a car in the "fast" group if its `qsec` is less than 18 seconds, and we put it in the "slow" group otherwise.
+
+We **could** supply `group_by()` with a logical comparison operator to do this grouping. It will technically work, but there's a problem.
+
+```{r}
+cars %>%
+  group_by(qsec<18) %>%
+  summarize(mean_hp=mean(hp))
+```
+
+That's one ugly, uninformative table. 
+
+A viewer who can't see your code and/or isn't familiar with the data set would have *no idea* what `TRUE` and `FALSE` mean in this context. And if you walked away from your code for a week or two, you might struggle to remember what `TRUE` and `FALSE` mean when you return. That's a big clue that this is not a good approach.
+
+## Correct and awesome
+
+The correct approach for situations like this is to create a new, informatively-named and -coded variable with `mutate()` that encodes which speed group a car belongs to. Then, you `group_by()` that variable.
+
+```{r}
+new_cars <- cars %>%
+  mutate(speed_grp = ifelse(qsec<18, "fast", "slow"))
+
+new_cars %>%
+  group_by(speed_grp) %>%
+  summarize(mean_hp=mean(hp), .groups="drop")
+```
+
+There are two major benefits to doing it this way.
+
+- It makes your summary table much more informative. As long as you define the speed groups in the text (as you should in any report), your table requires no other explanation. The groups are named in such a way that they do not require someone to see your code to understand their meaning.
+
+- It makes your code more reproducible. You can export/save the data set `new_cars` containing the new variable, and others could use it to easily generate the exact same summary table without worrying about differences in naming conventions, typos, or other things that could cause differences. If your new variable is used in many different analyses and it's non-destructive (meaning it doesn't change the value of existing columns, which `speed_grp` does not), you could even add it to the original `mtcars` data object at the beginning of the document without risk of compromising the original data.
+
+# How `%in%` works and why it's (usually) better than many `==` with `|`
+
+## The difference between `%in%` and `==`
+
+- `==` checks if a variable's value exactly matches *one and only one value*.
+
+- `%in%` checks if a variable's value exactly matches *at least one of many values contained in a vector*.
+
+One thing that you might notice about these definitions is that **there is absolutely no downside to using `%in%` when you could use `==`, but using `==` when you ought to use `%in%` can be a major problem**.
+
+To show the difference, I'll make some example objects.
+
+```{r}
+y <- "B"
+y
+vec <- LETTERS[1:5]
+vec
+
+# This returns 5 values
+y == vec
+
+# This returns 1 value
+y %in% vec
+```
+
+Why does this matter? Well, `R` can be fickle with `TRUE`/`FALSE` values. I'll give you an example, then show you what happens when you use `==` when you should use `%in%`.
+
+## Motivation
+
+Suppose you want to `filter()` observations based on the value of some categorical variable. Let's start by explicitly making a variable in `mtcars` into a categorical `factor()`. (For the sake of demonstration, ignore the fact that `carb` is technically a number---imagine it's words or names or something.)
+
+```{r}
+# Not a factor
+cars$carb
+
+cars <- cars %>%
+  mutate(carb=factor(carb))
+
+# Factor (you can tell because it has levels)
+cars$carb
+```
+
+Now, if I only want cars with even values of `carb` (for some reason), I have a few options. 
+
+- Here's a bad option: `==` with `|`. You have to copy/paste the same criteria over and over, and then change each one. 
+
+  -  This has a **ton** of room for error, and it's hard to update later if you want to change the criteria, especially if your `factor` has a ton of levels. 
+
+  - Also, consider how tedious this would be if the `factor` levels were words of even moderate length.
+
+```{r}
+cars %>%
+  filter(carb=="2"|carb=="4"|carb=="6"|carb=="8") %>%
+  select(carb, everything()) %>%
+  head()
+```
+
+- Maybe you're thinking "hey, there are fewer odd values of `carb`, why not just `filter()` those out?" Well, that also sucks more than it has to.
+
+  - Notice here that I have to change `|` to `&` because `carb` must be *NEITHER* 1 nor 3. That's surprisingly easy to mess up and notoriously tricky to debug.
+  
+  - Notice also that this does not solve any of the problems with the first method: it's still error-prone, and it's a pain to update if you change your mind, especially if your `factor` has a ton of levels.
+
+```{r}
+cars %>%
+  filter(carb!="1"&carb!="3") %>%
+  select(carb, everything()) %>%
+  head()
+```
+
+## The `%in%`-Man Cometh
+
+### The %in% solution
+
+Okay, now here's the `%in%` solution: make a vector with the `factor` levels you want to keep, and then make **one** filter statement.
+
+```{r}
+
+keep <- c(2, 4, 6, 8)
+
+# Good. Happy.
+in_filter <- cars %>%
+  filter(carb %in% keep) %>%
+  select(carb, everything())
+
+in_filter %>% 
+  head()
+
+nrow(in_filter)
+
+```
+
+### Why `==` is weird and bad sometimes
+
+If you use `==` expecting it to behave like `%in%`, you're going to be disappointed and confused.
+
+```{r}
+# Wrong. Bad. Unpredictable.
+eq_filter <- cars %>%
+  filter(carb == keep) %>%
+  select(carb, everything())
+
+eq_filter %>%
+  head()
+
+nrow(eq_filter)
+```
+
+Notice how the `eq_filter` data frame inexplicably has fewer observations than the `in_filter` data frame. From the `?Comparison` help page:
+
+> **Do not use `==` and `!=` for tests, such as in if expressions, where you must get a single `TRUE` or `FALSE`.** Unless you are absolutely sure that nothing unusual can happen, you should use the `identical` function instead.
+
+There does not appear to be any rhyme or reason as to which observations are returned when you do this. To this day, I have no idea how `R` picks which observations to return when using this form of (illegitimate) comparison.
+
+The `filter()` function is a vectorized `dplyr` verb, meaning it operates on each row of the data frame *individually* and checks whether *that one row* meets some condition (returns a single `TRUE`) or not (returns a single `FALSE`).
+
+Using `==` in comparisons that could yield multiple `TRUE`/`FALSE` values but expect one `TRUE`/`FALSE` value (as in `filter()`) can have **unexpected, unpredictable, and seemingly random consequences that often make absolutely no sense and are totally inconsistent** (and therefore nearly impossible to debug). Do. Not. Do. It.
+
+The `dplyr` comparison operator `%in%` uses the `match()` function, which operates similarly to `identical()`. It always returns one `TRUE`/`FALSE` value, no matter what. It thus operates consistently in situations where a comparison could yield multiple `TRUE`/`FALSE` values but expect one `TRUE`/`FALSE` value.
+
+### Why `%in%` is awesome and you should master it
+
+When you have a small data set, the benefits of `%in%` can be marginal. But `%in%` is a very important operator to be comfortable with if you plan to do any kind of data analysis professionally, whether in `R` or some other programming language, since many have some version of the `%in%` operator. 
+
+Here's an illustrative example. I'll start by making a fake data set.
+
+```{r}
+set.seed(16)
+fake_data <- tibble(x=rnorm(10000),
+                    y=rbinom(10000, 30, 0.3),
+                    group=factor(sample(c(LETTERS, letters),
+                                    size=10000,
+                                    replace=T)))
+```
+
+You can see that I now have 52 groups.
+
+```{r}
+length(unique(fake_data$group))
+```
+
+Uh oh. That's a lot of groups. What if I want to select, say, a specific 9 groups? Using `==` and `|`, that's a lot of copy/pasting and a **lot** of room for error. With `%in%`, the hardest part is defining the vector of values to keep. As an example, I'll use the characters in my name.
+
+(Don't worry too much about how you'd get the vector of grouping values you want to keep; there's generally a relatively simple method involving some combination of `dplyr` selectors, `stringr` functions, and/or `grepl()`.)
+
+```{r}
+keep_fake <- unlist(strsplit("MichaelMays", split = ""))
+
+# Notice that there are repeats in here. It doesn't matter.
+#    That's how cool %in% is.
+#    There are a total of 9 unique values.
+keep_fake
+```
+
+With `%in%`, I have to write as much code to `filter()` observations from 9 groups as I would to `filter()` from 90 groups or 3 groups. 
+
+```{r}
+fake_filter <- fake_data %>%
+  filter(group %in% keep_fake)
+
+fake_filter %>%
+  head(n=8)
+
+nrow(fake_filter)
+```
+
+And if I want to change my `filter()`, I don't have to change my actual `filter()` code at all. I only have to change the vector of values.
+
+```{r}
+keep_fake <- unlist(strsplit("TheQuickBrownFox", split = ""))
+
+# Everything below here is exactly the same
+fake_filter <- fake_data %>%
+  filter(group %in% keep_fake)
+
+fake_filter %>%
+  head(n=8)
+
+nrow(fake_filter)
+```
+
+### One quirk: negating `%in%`
+
+The biggest issue with the `%in%` comparison operator is that negating it ("not in") is not as simple as other comparison operators. For example, with `==` ("equal to"), you simply replace the first `=` with `!` ("not"), resulting in `!=` ("not equal to"). 
+
+Trying to do the same with `%in%` results in an error. Here's two sensible methods one might try.
+
+```{r, error=T}
+cars %>%
+  filter(carb !%in% keep)
+```
+
+```{r, error=T}
+cars %>%
+  filter(carb %!in% keep)
+```
+
+Insteead, `%in%` is negated by (1) selecting the observations you *don't* want with `%in%` and then (2) negating that selection by enclosing it in parentheses and putting `!` in front of the parentheses. That looks like this:
+
+```{r}
+cars %>%
+  filter(!(carb %in% keep))
+```
+
+This can be counter-intuitive. I solve this by defining a new comparison operator `%notin%` in the `setup` chunk at the start of every `R markdown` file. (I do it in the `setup` chunk to ensure that it is automatically defined before any other code is run.) The only thing you have to remember is that this must be done **after loading the `tidyverse` library.
+
+```{r}
+`%notin%` <- Negate(`%in%`)
+```
+
+```{r}
+cars %>%
+  filter(carb %notin% keep)
+```
+
+# A crash course in data visualization principles
+
+If something I say in this section contracticts what you're told to do for an assignment, **do what the problem tells you to do.** This is supposed to be general knowledge that you might or might not be able to apply in this course, but will definitely help you down the line.
+
+(Also, full disclosure: this section is mainly me being a grumpy old man about data visualization. I tend to take a hardline utilitarian approach to data visualization, and it's something I think a lot of people in data science could benefit from improving. Nothing in this section will cost or gain you points on an assignment. It's just stuff that I think you should learn at some point.)
+
+## Good data visualization is function-first
+
+There's no universal consensus on what a "perfect" plot looks like, but there are some conventions about what "good" plots look like. You would do well to learn and follow them. These conventions might make your plots less instantly visually appealing, but it will make them more functional. We are not here to make *infographics*---leave those to boomer Facebook groups, non-profits, and propagandists---we are here to make *data visualizations*; we primarily care about functionally and accurately displaying data. You can make a function-first plot look better pretty easily. It's much harder to make a visual appeal-first plot more functional.
+
+## What is an aesthetic?
+
+In `ggplot()` terminology, "aesthetics" are the individual elements of a plot that display *data*. In data visualization generally, the term "aesthetic" is used interchangeably with "mapping". 
+
+What's important from the definition above is that aesthetics must display data. That means that not every part of a plot is an aesthetic; some plot elements are merely used to make the plot more visually appealing. The most basic types of plots have two aesthetics: the x-axis value and the y-axis value. For example, look at the scatter plot below.
+
+```{r}
+set.seed(4)
+plot_data <- tibble(x=rnorm(300, 0, 2), y=rnorm(300, 1),
+                    group=sample(LETTERS, size=300, replace=T))
+
+plot_data %>%
+  ggplot(aes(x=x, y=y)) +
+    geom_point()
+```
+
+The meaningful information (that is, the data) can be reduced to the location of an individual observation on the x and y axes. Those are the two values being displayed, and they're the two aesthetics (`aes()`) specified in the `ggplot()` call.
+
+In this plot, the points themselves---the dots you see---*are not an aesthetic* because *they do not convey unique information*. Every dot looks the same, so you get no information from the dot itself. The dots only exist to simultaneously convey two pieces of information from the actual plot aesthetics: an observation's location along each of the two axes. 
+
+The dot that corresponds to an observation is simply the location where a vertical line located at its x value intersects a horizontal line located at its y value. Since a plot with so many lines would be very cluttered, we (by convention) display only the point where the lines intersect. Note that this convention for scatter plots is primarily motivated by a concern for function (the plot's readability). It just so happens that the functional concern requires that we make the plot look better as well.
+
+## One aesthetic, one variable (AKA: parsimony)
+
+The first and most important principle is parsimony: you should have as many aesthetics as you have variables. No more. No less. If you are trying to display three variables, your plot should have three (and only three) aesthetics.
+
+Why? Because even if they don't know it, viewers expect unique aesthetics to display unique information. Redundancy is not just inefficient, it's **confusing**. The process by which viewers figure out which data each aesthetic conveys should be your primary consideration when making a plot. The goal is to make the plot as intuitive as possible. Mapping one variable to multiple aesthetics slows down this process considerably, and introduces more room for misinterpretations.^[There are, of course, some exceptions to this principle; that's what makes it a "principle" and not a "rule". But you will encounter these exceptions so infrequently that you can (and should) ignore the fact that they exist. In general, these exceptions are isolated to very specific types of plots used in very specific fields. In these cases, the principle is typically violated out of convention; since your viewers will expect the plot to be made a certain way, following the general principle I've outlined will make your plots *less* readable to your intended audience.]
+
+Consider this plot. (I'm picking groups A through D just so the plot is less cluttered.)
+
+```{r}
+plot_data %>%
+  filter(group%in%LETTERS[1:4]) %>%
+  ggplot(aes(x=x, y=y, color=group, size=x)) +
+  geom_point()
+```
+
+We have three variables---`x`, `y`, and `group`---mapped to four aesthetics---the x-axis and size for `x`, the y-axis for `y`, and color for `group`. 
+
+- The size aesthetic is redundant; it does not convey new information. Dots on the left side of the plot will always be smaller than those on the right. But we already know that they're smaller `x` values! We have a scale on the x-axis that shows their value.
+
+- The size aesthetic is potentially confusing. At first glance, it's not clear that the size of a dot is directly related to its location along the x-axis. Viewers would have a good reason to believe that the size of the dots means something unique, when it does not. 
+
+## Aesthetics have an implicit order
+
+Another convention is the implied order in which aesthetics should be added to a plot. This depends somewhat on the *type* of plot you're making, but the general idea is to go from general (aesthetics that are more obvious) to specific (smaller, harder to notice aesthetics), and lastly to separate your plot somehow.
+
+A good general order is given below. As you add variables to your plot, you should go down the list below and (generally) add aesthetics in order.^[You might have to rearrange your aesthetic/variable mappings when you add another variable. For example, it's usually best to have color represent a discrete variable so that you can make the colors very distinct (and therefore easy to distinguish). If your third variable is continuous but a discrete variable is mapped to x or y, you might want to swap them. There are exceptions (e.g., heat maps tend to have continuous variables mapped to color), but this principle holds in general.]
+
+- X (with a summary statistic as Y, such as count)
+
+- Y (displaying a value in the data instead of a summary statistic)
+
+- Color/fill. 
+
+  - Never use color-coded aesthetics to display more than one variable in a single plot. Ever. If you are using fill to display one variable, you should not also use outline color to display another variable.
+  
+  - This (generally) includes hue. If you're color-coding your points or lines to represent (for example) groups, you should not also use hue to represent variation in another variable within groups.
+  
+  - If you're making plots for a general audience, consider whether your color choices are colorblind-friendly. Greyscale is universally colorblind-friendly, and it usually makes your color-coded plots look more minimalist to boot.
+
+- Plot-specific aesthetics (should only be used when you have ~4--5 groups or fewer). Examples include:
+
+  - Line type (for plots with lines---make sure they're *very* visually distinct)
+
+  - Point shape (for plots with points---make sure they're *very* visually distinct)
+
+- Stop and think very, very hard about whether you **need** to plot a fifth variable in one single (set of) plot(s), or if you should split your plot into multiple separate plots.
+
+- Facet along *only one axis*. That is, facet your plot and make all sub-plots aligned either horizontally or vertically.
+
+  - If you have so many subplots that you have to put them on multiple lines/columns in order to make them readable, you almost certainly failed to think hard enough at the previous step.
+
+  - In that case, you should consider whether there's some sensible grouping that would allow you to split your faceted subplots across two different plot images.
+
+- Facet along the other axis, creating a plot matrix. If you've reached this step, you are probably trying to plot too many variables at once. Your plot is most likely unreadable to a new viewer.
+
+As a final note, I am a firm believer that alpha transparency should **never** be used as an aesthetic. It should only be used to make a (line or point) plot with many overlapping observations more readable, much like jittering points. If you use it, make sure that all points remain clearly visible. If you can't maintain clear visibility for every point/line, you should subset your data based on some grouping variable and display the groups separately.

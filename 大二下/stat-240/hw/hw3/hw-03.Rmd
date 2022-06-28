@@ -1,0 +1,208 @@
+---
+title: "Assignment 3"
+author: "ZHAN YU"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, fig.height = 3)
+library(tidyverse)
+library(lubridate)
+## Note: this code assumes viridis.R is two steps up the file directory tree
+## Comment it out and use the line below if the file is in the same directory
+## Or comment out both lines if you do not have the file
+source("../../scripts/viridis.R")
+```
+
+#### Due Friday, February 12, 11:59 PM CT
+
+### Problems
+
+The following R chunk reads in the exoplanet data.
+
+```{r read-planet-data}
+## Read in the csv file
+## There is one row per exoplanet after applying `filter(default_flag != 0)`
+## Select some variables that we will work with and rename them
+planets <- read_csv("../../data/exoplanets-3sept2020.csv") %>%
+  filter(default_flag != 0) %>%
+  select(pl_name, discoverymethod, disc_year, sy_pnum, pl_rade, pl_bmasse) %>%
+  rename(name=pl_name, method=discoverymethod,year=disc_year, number=sy_pnum, radius=pl_rade, mass=pl_bmasse) 
+```
+
+### 1
+
+The following block of code creates a new data frame from the `planets` table, and then makes two different scatter plots of log10(mass) versus year.  Run the code and then answer the questions noted below chunk.
+
+```{r}
+planets_mass <- planets %>%
+  select(mass,year,method) %>%
+  filter(method %in% c("Radial Velocity", "Imaging", "Transit")) %>%
+  drop_na() # drop missing values after selecting the variables we will use for the plots
+
+ggplot(planets_mass, aes(x = year, y = mass, color = method)) +
+  geom_point() +
+  scale_y_log10() +
+  xlab("Discovery Year") +
+  ylab("Mass (Earth Mass)") +
+  ggtitle("Exoplanets Mass vs. Discovery Year",
+          subtitle="Method by color")
+
+ggplot(planets_mass, aes(x = year, y = mass, shape = method)) +
+  geom_point() +
+  scale_y_log10() +
+  xlab("Discovery Year") +
+  ylab("log10(Mass/Earth Mass)") +
+  ggtitle("Exoplanets Mass vs. Discovery Year",
+          subtitle="Method by shape")
+```
+
+>Describe the differences between the two plots.
+
+These two plots use different ways to distinguish different methods. The first plot uses various colors to represent different methods, but the second plot uses various shapes to represent different methods.
+>Which do you think is a more effective at conveying the information and why?
+
+I think the first plot is a more effective one at conveying information, because the different colors help me to distinguish the points represented to those methods. For the second plot, although the points of different methods have different shape, it is still difficult to know clearly what points belong to what method due to the same color.
+
+
+### 2
+
+Using the exoplanet data table `planets`, select the variables, `year`, `radius`, and `number`, then remove observations with missing values.  Then make a graphic that satisfies the following:
+
+- Make a scatter plot with discovery year on the x axis and radius on the log10 scale on the y-axis.   
+- Use a different facet for each number.  Recall that `number` indicates the number of exoplanets discovered orbiting the same star; this is referred to as the size of the exoplanet system.     
+- Set the argument `position` within the `geom_point()` command using the command `position_jitter()` so that points are jittered horizontally, but not vertically.  Choose an amount of jitter so that there is a reduction in overplotting, but all points for a single year appear as a band without overlap with other years.  
+- Add descriptive axis labels and a title.
+
+
+```{r}
+planets_radius <- planets %>%
+  select(year,radius,number) %>%
+  drop_na() # drop missing values after selecting the variables we will use for the plots
+ggplot(planets_radius, aes(x = year, y = log10(radius))) +
+  facet_wrap(~number)+
+  geom_point(position = position_jitter(width = 0.01, height = 0), size = 0.1) +
+  xlab("Discovery Year") +
+  ylab("log10(Mass (Earth Mass))") +
+  ggtitle("Exoplanets Mass vs. Discovery Year",
+          subtitle="using y = log10(mass)")
+```
+
+
+
+### 3
+
+Using the exoplanet data table `planets`, select the variable `method`, then remove observations with missing values.  Then make a graphic that satisfies the following:
+
+-  Make a bar graph of the method variable that displays the count of the number of observations for each method. 
+-  Use `theme(axis.text.x = element_text(angle = 60, hjust = 1))` to adjust the orientation of the x-axis text.  You may adjust the `angle` and `hjust` values if you would like to in order to improve the legibility of the tick mark labels.  
+- Add descriptive axis labels and a title.
+
+```{r}
+planets_method <- planets %>%
+  select(method) %>%
+  drop_na() # drop missing values after selecting the variables we will use for the plots
+ggplot(data = planets_method) +
+  geom_bar(mapping = aes(x = method)) +
+  xlab("Method") +
+  ylab("Observations Count") +
+  ggtitle("Exoplanets Observations Count for each Method") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+
+### 4
+
+Repeat the previous problem, but replace the counts on the y-axis with proportions.
+(*Hint:* You need to set the `y` aesthetic to `stat(prop)` and the group aesthetic to `1`. See the second example in R4DS section 3.7.)
+
+```{r}
+### Add your code here
+planets_method <- planets %>%
+  select(method) %>%
+  drop_na() # drop missing values after selecting the variables we will use for the plots
+ggplot(data = planets_method) +
+  geom_bar(mapping = aes(x = method, y = stat(prop), group = 1)) +
+  xlab("Method") +
+  ylab("Observations Count") +
+  ggtitle("Exoplanets Observations Count for each Method") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+
+
+
+### 5
+
+The following block of code reads in the raw Lake Mendota data and makes several transformations.
+Examine indicated sections of the code and answer the corresponding questions listed below the chunk.
+
+```{r read-mendota}
+mendota_interval <- read_csv("../../data/lake-mendota-raw.csv") %>% 
+## question (a) begin
+  select(-days) %>% 
+## question (a) end
+## question (b) begin    
+  drop_na() %>% 
+## question (b) end
+## question (c) begin    
+  separate(winter,into = c("year1","year2"), remove = FALSE) %>%
+  mutate(year1 = as.numeric(year1)) %>%
+  mutate(year2 = year1+1) %>% 
+## question (c) end    
+  mutate(closed = case_when(
+    str_detect(closed,"Oct|Nov|Dec") ~ str_c(closed,' ',year1),
+    str_detect(closed,"Jan|Feb|Mar|Apr|May") ~ str_c(closed,' ',year2),
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(closed = dmy(closed)) %>%
+  mutate(open = case_when(
+    str_detect(open,"Oct|Nov|Dec") ~ str_c(open,' ',year1),
+    str_detect(open,"Jan|Feb|Mar|Apr|May") ~ str_c(open,' ',year2),
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(open = dmy(open)) %>% 
+  mutate(days = open - closed)
+
+mendota <- mendota_interval %>% 
+## question (d) begin
+  group_by(winter) %>% 
+  summarize(intervals = n(),
+            days = sum(days),
+            first_freeze = min(closed),
+            last_thaw = max(open)) %>%
+## questions (d) end  
+  mutate(year1 = as.numeric(str_sub(winter,1,4))) %>%
+  mutate(decade = floor(year1 / 10) * 10) %>% 
+  select(winter,year1,everything())
+```
+
+#### (a)
+
+> What does the line `select(-days)` do to the data set?
+
+- This line of code used to select all columns from the data set except "days" column.
+
+
+#### (b)
+
+>What does the command `drop_na()` do? How many rows (observations) are in the data set when it is first read in and how many rows remain after this code is executed?
+
+- The command "drop_na()" uses to drop rows containing missing values. There are 175 rows are in the data set when it is first read in and 172 rows remain after this code is executed.
+#### (c)
+
+>Describe the effect these three lines of code have on the data set
+
+- These three lines of code separate the beginning year and the ending year for each winter in the "winter" column to columns "year1" and "year2". Then, the type of data in column "year1" is changed from chr to dbl. Finally, the data from column "year1" is added by one to gain the number of next year and store the number of next year in the column "year2".
+#### (d)
+
+>Explain what the effect of these two commands are. In your response, describe what the effect of the `group_by(winter)` command is, what the function `n()` does, and what the functions `sum()`, `min()`, and `max()` do.
+
+
+- These two commands use the "group_by(winter)" command to group the mendota_interval dataset by column "winter" and then apply the "summarize()" functions. The function "n()" gets the count of the number of rows in each "winter" group. The function "sum()" calculates the total amount of freeze days in this winter in each group and stores in the "day" column. The function "min()" finds the minimum (earliest) close date in the group and stores in the "first_freeze" column; and function "max()" finds the maximum (latest) open date in the group as the "last_thaw" column.
+### 6
+
+> Explain the difference between the `geom_col()` and `geom_bar()` functions.
+
+- If the data represent the height of the bars is not pre-counted in the data frame, we use the "geom_bar()" function. 
+- If the data represent the height of the bars is pre-counted and stored in the data frame, we use the "geom_col()" function with the     y-position aesthetic mapped to the variable that has the counts.

@@ -1,0 +1,130 @@
+---
+title: "STAT 240 Discussion 2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+```
+
+## Group Name 3 (use the assigned group name)
+
+## Members Present
+WAI ZIN LINN
+CAROLINE HABERLAND-ERVIN
+SHANE SPELLMAN
+**ZHAN YU**
+- ADD THE NAMES OF EVERYONE PRESENT
+- MAKE THE NAME **BOLD** OF THE RESPONSIBLE PERSON TO UPLOAD THE FILES FOR THE GROUP
+
+## Members Absent
+
+- ADD NAMES OF ANY ABSENT MEMBERS
+
+## Exoplanet Data
+
+We will be working with data on exoplanets; exoplanets are planets orbiting stars outside our Solar System.  The data were pulled from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/index.html) on September 3, 2020.
+
+```{r read-data, echo = FALSE}
+## Read in the csv file
+## There is one row per exoplanet 
+## Select some variables that we will work with and rename them
+## Remove very massive planet (only to improve plot visuals for this assignment)
+## Drop missing values; the remaining exoplanets will have estimates of both mass and radius
+planets <- read_csv("../../data/exoplanets-3sept2020.csv") %>%
+  filter(default_flag == 1) %>%
+  select(pl_name, discoverymethod, disc_year, sy_pnum, pl_rade, pl_bmasse) %>%
+  rename(planet=pl_name, method=discoverymethod, year=disc_year, number=sy_pnum, radius=pl_rade, mass=pl_bmasse) %>%
+  drop_na() 
+```
+
+The variables we will be working with are defined below.  If you want more details, please see the exoplanet archive [data column definitions](https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html) (using the column names in the raw data).
+
+`planet` = Planet Name  
+`method` =  Method by which the planet was first identified  
+`year` = Discovery Year (the year it was discovered)  
+`number` = Number of Planets  
+`radius` = Planet Radius (units: Earth Radius)  
+`mass` = Approximate or Minimum Planet Mass (units: Earth Mass)  
+
+
+
+## Questions
+
+### Question 1
+
+> Make a scatter plot with `radius` (the estimate of the planet radius) on the x-axis and `mass` (the estimate of the planet mass) on the vertical axis.  The `scale_y_log10()` and `scale_y_log10()` are added to change the axis values to a `log10()` scale.  
+
+```{r question-1}
+## COMPLETE CODE TO MAKE THIS PLOT
+ggplot(planets) +
+  scale_y_log10() +
+  scale_x_log10() +
+  xlab("Radius") +
+  ylab("Mass (Earth Mass)") +
+  ggtitle("Exoplanets Mass vs. Radius",
+          subtitle="Using NASA Explanet Archive Data")+
+  geom_point(aes(x=radius,y=mass))
+```
+
+
+
+### Question 2
+
+> Make a scatter plot like the previous problem, but use the `color` aesthetic for `method` (discovery method).
+
+```{r question-2}
+## COMPLETE CODE TO MAKE THIS PLOT
+ggplot(planets) +
+  scale_y_log10() +
+  scale_x_log10() +
+  xlab("Radius") +
+  ylab("Mass (Earth Mass)") +
+  ggtitle("Exoplanets Mass vs. Radius",
+          subtitle="Using NASA Explanet Archive Data")+
+  geom_point(aes(x=radius,y=mass,color = method))
+```
+
+
+
+### Question 3
+
+- Which discovery method was used to detect the most exoplanets in our `planet` data frame?  
+- What general pattern do you notice between planet mass and radius?  
+- What is the estimated radius (approximately) of the most massive planet included on the plot?
+
+
+#### Response
+
+- Transit
+- There is a slight positive relationship between planet mass and      radius
+
+- 14.0
+
+
+### Question 4
+
+> Another way to display differences by discovery method is to separate the plot into multiple panels (or facets) and plot different subsets of the data in each.
+> We are going to look at planet mass versus discovery year.
+> Add a comment to say what the code on the next line does where indicated.
+
+
+```{r question-4}
+ggplot(planets, aes(x=year,y=mass)) +
+  geom_point() +
+  ## Creates a line of best fit for the points in the graph
+  # Response: 
+  geom_smooth(method="lm") +
+  ## Creates a different graph for each method
+  # Response:  
+  facet_wrap(~method) +
+  xlab("Discovery Year") +
+  ylab("Mass (Earth Mass)") +
+  ggtitle("Exoplanets Mass vs. Discovery Year",
+          subtitle="Using NASA Explanet Archive Data")
+```
+
+
+
+

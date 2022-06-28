@@ -1,0 +1,199 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+library(tidyverse)
+library(lubridate)
+## Note: this code assumes viridis.R and ggprob.R are in a directory named scripts
+##       which is two steps up the file directory tree
+## Edit as needed
+source("../../scripts/viridis.R")
+#source("../../scripts/ggprob.R")
+```
+
+## Homework 7
+
+#### Due Friday, March 19, 11:59 PM CT
+
+Problems 1 - 6 use the exoplanet data set to practice using string and regular expression commands, and the remaining are probability questions.  Recall that the data were pulled from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/index.html) on September 3, 2020.
+
+Note that several of the questions are optional and will not be graded. (We will post solutions for all problems listed.)
+
+The following block of code will read in the exoplanet data from the file *exoplanets-3sept2020.csv*, filter to include only confirmed exoplanets, select and rename a subset of variables, and add an index with the row number.
+
+```{r}
+planets <- read_csv("../../data/exoplanets-3sept2020.csv")%>%
+  filter(default_flag == 1) %>%
+  select(pl_name, hostname, discoverymethod, disc_year, disc_facility,
+         sy_pnum, pl_rade, pl_bmasse, rowupdate) %>%
+  rename(planet=pl_name, star=hostname, method=discoverymethod,
+         facility=disc_facility, year=disc_year, number=sy_pnum,
+         radius=pl_rade, mass=pl_bmasse, update=rowupdate) %>% 
+  mutate(index = row_number()) %>% 
+  select(index, everything())
+```
+
+### Problems
+
+### 1
+
+Create and print a table which shows the number of exoplanets discovered  that have the word "Kepler" as part of the planet name, grouped by `year` and `facility`.
+
+What year was the first of these exoplanets discovered by a facility *other than* the Kepler facility?
+
+- 2013
+```{r}
+planets %>%
+  filter(str_detect(planet, "Kepler")) %>%
+  group_by(facility, year) %>%
+  summarise(count = n())
+```
+
+
+### 2
+
+The column `update` in the exoplanet data set has character values where some entries have a date only, such as `5/14/14` and others have a date and time, such as `9/4/18 16:14`.
+
+Create a new column named `update_format` with the value "date" if the format is like `5/14/14`, "datetime" if the format is like `9/4/18 16:14`, and "other" if it is something else.
+
+Print out a summary table that counts the number of observations have each type of `update_formate`. 
+
+```{r}
+planets<-planets %>%
+  mutate(update_format = case_when(str_detect(update, " ") ~ "datetime", !str_detect(update, " ") ~ "date",TRUE~"other"))
+planets%>%
+  group_by(update_format) %>%
+  summarise(count = n())
+
+```
+
+### 3
+
+How many *distinct* star names begin with a number?
+
+-42
+
+```{r}
+df2<-planets%>%
+  select(star)%>%
+  filter(str_detect(star,"^\\d"))%>%
+  distinct()%>%
+  summarize(n=n())
+
+df2
+
+
+```
+
+### 4 (Optional, ungraded)
+
+Of the distinct star names that begin with a number,  create a bar plot of these leading numbers.  The height of the bars should indicate the number of stars for each leading number.    
+
+- Display the bars in numerical order (lowest number to the left of the plot window), and include a tick mark and label (indicating the leading number) for each bar.   
+- Be sure to include descriptive axis labels and a title. 
+
+*Hint:  First create a variable with the leading number from the star names, then create the bar plot.  Be careful because some numbers have more than one digit.*   
+
+- What are the name of the stars that have the most common leading number?  Print out a table with these star names.
+
+
+
+### 5 (Optional, ungraded)
+
+The convention for naming planets is typically to take the name of the star and then add a lower-case letter (e.g., b, c) following the star name.  However, not all planet names follow this convention. 
+
+How many planet names do not follow this convention? 
+
+Note: special care is required if the name of the star contains a symbol with special meaning in a regular expression, such as `+`.
+
+*Hint: You may find it helpful to create a column with the regular expression you wish to compare to the planet name.*
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+
+
+### 6
+
+Find all the planets where the planet name is the name of the star, a space, and then something else we will label a suffix.  For example, the planet "11 Com b" is orbiting the star "11 Com" - the suffix would be the "b".  Create a data frame where you add a variable named `suffix` which contains this suffix.  
+
+(a)  Create and print out a summary table that counts the number of times each single lower case letter is used, arranged from most to least frequent use.  This table should only include suffixes that are a single lower-case letter.
+
+(b)  In how many cases is the suffix a single lower case letter?
+
+- There are 4246 cases is the suffix a single lower case letter.
+
+```{r}
+suffix_df <- planets %>%
+  filter(str_sub(planet, 1, str_length(star) + 1) == str_c(star, " ")) %>%
+  mutate(suffix = str_sub(planet, str_length(star) + 2, str_length(planet)))
+
+suffix_df %>%
+  filter(str_detect(suffix, "^[:lower:]$")) %>%
+  group_by(suffix) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+```
+
+
+
+## Probability Problems
+
+A discrete random variable $X$ has possible values and probabilities contained in the following data frame which includes some missing values.
+
+Use this distribution for the following four problems.
+
+```{r}
+pmf_df <- tibble(
+  x = c(-5, -2, 0, 1, 3),
+  p = c(0.1, 0.25, .15, NA, 0.2)
+)
+pmf_df
+```
+
+### 7
+
+What is $P(X = 1)$? Briefly explain how you arrived at the answer.
+
+- P(X = 1) = 1 - P(X = -5) - P(X = -2) - P(X = 0) - P(X = 3) = 1 - 0.1 - 0.25 - 0.15-0.2 = 0.3
+
+
+
+### 8
+
+What are the expected value (mean) and variance of the distribution of $X$?
+```{r}
+prob8 <- replace_na(pmf_df, list(p = 0.3))
+# expected value (mean)
+mean = sum(prob8[["x"]] * prob8[["p"]])
+# variance of the distribution
+variance = sum((prob8[["x"]] - mean)^2 * prob8[["p"]])
+mean
+variance
+```
+
+### 9
+
+Create a graph which has a line segment from y = 0 to the probability for each possible value of $X$ to visualize its probability mass function.  Since there are 5 possible values for $X$, you should have 5 vertical bars on your graph.
+
+Hint: consider using the **ggplot2** command `geom_segment()`.
+```{r} 
+ggplot(prob8, mapping = aes(x = x, y = p)) +
+  geom_point() +
+  geom_segment(mapping = aes(xend = x, yend = 0))
+```
+
+
+### 10 (Optional, ungraded)
+
+Add a column named `cdf` (representing the "cumulative distribution function" of X) to the `pmf_df` table which contains the value $P(X \le x)$ for each case.
+Use the function `geom_step()` to graph this function.  *Hint: the base R function `cumsum()` which calculates a cumulative sum may be helpful.*
+
+The graph of the function will look better if you also include $x$ values below -5 and above 3 (e.g., -6 and 4).  You can assign these new values probabilities of 0 and bind them to the `pmf_df` table.
+
+You graphic should look like a step-function that starts at zero on the left and increases to 1 on the right.
+
+
+

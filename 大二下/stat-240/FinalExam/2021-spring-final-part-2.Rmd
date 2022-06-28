@@ -1,0 +1,172 @@
+---
+output: html_document
+geometry: margin=0.75in
+fontsize: 12pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      cache = FALSE)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(modelr)
+source("../scripts/viridis.R")
+```
+
+
+
+# Spring 2021 STAT 240 Final Exam - Part 2
+
+This final exam has TWO Parts - both parts must be completed and submitted by 11:59 PM CT (local Madison, WI time) on Wednesday, May 5.  Once started, an Exam Part must be completed and submitted on Canvas within 4 hours.  
+
+- You will need to agree to an honor code statement in each exam part in order to receive credit.
+- You are not allowed to communicate with anyone using any means (email, phone, text, social media, online discussion platforms, etc.) except the instructors of this course. You are allowed to use materials from the course and the internet. 
+- If you have questions during the exam, post your questions on a private post on Piazza. To do this, select the "Individual Student(s) / Instructor(s)" option next to "Post to:" when creating your post.
+- You can expect for questions to be addressed during normal working hours in Madison, WI (9 AM CT - 5 PM CT) on Wednesday, May 5.  Questions posted outside that window may still be addressed.
+
+
+
+## Part 2
+
+
+### Data Analysis Questions: Obesity Survey Results from Colombia, Peru and Mexico
+
+- The data file is *obesity_final_exam.csv*, which is posted on Canvas.
+
+- The data set includes results from a survey carried out with participants from Colombia, Peru and Mexico presented in this paper: Palechor, F.M. and de la Hoz Manotas, A., 2019. Dataset for estimation of obesity levels based on eating habits and physical condition in individuals from Colombia, Peru and Mexico. Data in brief, 25, p.104344.  
+
+- 23% of the observations are based on survey results from participants, while 77% are synthetic.  We can consider each row to represent a single person.  
+
+- The variables include information on the individuals along with behavioral characteristics and an assigned obesity level (Insufficient Weight, Normal Weight, Overweight Level I, Overweight Level II, Obesity Type I, Obesity Type II and Obesity Type III).
+
+
+The variables included in this file are:
+
+- Gender: response to the question "What is your gender?"  
+- Age: response to the question "What is your age?" 
+- Height: response to the question "What is your height?" (units = meters)  
+- Weight: response to the question "What is your weight?"(units = kg)  
+- FAVC: Frequent consumption of high caloric food   
+- FCVC: Frequency of consumption of vegetables    
+- NCP: Number of main meals    
+- CAEC: Consumption of food between meals   
+- CH20: Consumption of water daily   
+- CALC: Consumption of alcohol   
+- SCC: Calories consumption monitoring  
+- FAF: Physical activity frequency  
+- TUE: Time using technology devices  
+- MTRANS: Transportation used 
+- NObeyesdad: Obesity status
+
+
+
+
+#### Question 2.1 (5 points) 
+
+- Read in the *obesity_final_exam.csv* data  
+-  Create a new variable called `status` with three categories, "obese", "overweight" and "normal", from the values of the variable `NObeyesdad` as 
+    - "obese" if `NObeyesdad` is "Obesity_Type_I","Obesity_Type_II", or "Obesity_Type_III"  
+    - "overweight" if `NObeyesdad` is "Overweight_Level_I" or "Overweight_Level_II" 
+    - "normal" if `NObeyesdad` is "Insufficient_Weight" or "Normal_Weight"  
+- Display a scatter plot with weight on the y-axis, height on the x-axis, and the points colored according to the new variable `status`.  
+-  Add separate least-squares lines for each category of `status` and colored to match the corresponding points.  Do not include the shaded bands around the lines.  
+-  Use `facet_wrap` to display separate plots by gender.  
+-  Add a descriptive title and appropriate axis labels. 
+```{r}
+obesity <- read_csv("../data/obesity_final_exam.csv")
+obesity<-obesity%>%
+    mutate(status = case_when(
+    NObeyesdad == "Obesity_Type_I" |  NObeyesdad == "Obesity_Type_II"| NObeyesdad == "Obesity_Type_III"~ "obese",
+    NObeyesdad == "Overweight_Level_I" |  NObeyesdad == "Overweight_Level_II"~ "overweight",
+    NObeyesdad == "Insufficient_Weight" |  NObeyesdad == "Normal_Weight"~ "normal"))
+
+ggplot(obesity,aes(x = Height, y = Weight, color = status)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+    facet_wrap(~Gender)+
+  labs(x = "Height", y = "Weight") +
+    ggtitle("Height vs Weight")+
+  theme_bw()
+
+```
+
+
+
+
+#### Question 2.2 (6 points) 
+
+The variable `FAVC` captures whether the observation has frequent consumption of high caloric food.  If `FAVC` is "yes", then the observation does have frequent consumption of high caloric food; if `FAVC` is "no", then the observation does not have frequent consumption of high caloric food.  
+
+- By `Gender` and `NObeyesdad`, estimate the proportion of observations who have `FAVC` = "yes".  The denominator of each proportion should be the total number of observations for each category combination of `Gender` and `NObeyesdad`.  
+    - For example, the denominator of the proportion for `Gender`="Male" and `NObeyesdad`="Obesity_Type_I" is the total number of observations with `Gender`="Male" and `NObeyesdad`="Obesity_Type_I"; the numerator is the number of observations with `Gender`="Male" and `NObeyesdad`="Obesity_Type_I" and `FAVC` = "yes".
+
+- Create a table with two rows that correspond to `Gender` ("Female" or "Male"), and five columns.  The columns (in this order) are Gender, Normal_Weight, Obesity_Type_I, Obesity_Type_II, Obesity_Type_III.  The values in the first column are "Female" and "Male".  The values in the remaining columns are the proportions estimated in the previous step arranged in the appropriate row and column.  
+    - For example, the value in the first row (corresponding to "Female") and second column (corresponding to "Normal_Weight") are the proportion of Females with `NObeyesdad` = "Normal_Weight" and`FAVC` = "yes".  
+
+-  Print out the table so that all five columns and two rows appear.
+
+*Note:  the final table only includes `NObeyesdad` categories of Normal_Weight, Obesity_Type_I, Obesity_Type_II, Obesity_Type_III*.
+
+```{r}
+obesity %>%
+    group_by(Gender,NObeyesdad)%>%
+    summarise(p=mean(FAVC=="yes"))%>%
+    filter(NObeyesdad %in% c("Normal_Weight","Obesity_Type_I","Obesity_Type_II","Obesity_Type_III"))%>%
+    pivot_wider(id_cols = Gender, names_from=NObeyesdad, values_from = p)
+```
+
+
+
+
+#### Question 2.3 (7 points) 
+
+- Consider only the observations with `NObeyesdad` = "Normal_Weight".  
+-  Make an assumption that there is a universal $p_f$  representing the probability any normal weight female would frequently consume high caloric food (`FAVC` is "yes").  
+- Similarly, make an assumption that there is a universal $p_m$  representing the probability any normal weight male would frequently consume high caloric food (`FAVC` is "yes").  
+- Assume that all individuals are independent of each other.
+
+In this problem, we wish to test the null hypothesis that $p_f = p_m$ versus the alternative that they are different.
+
+*(a)* Test the hypothesis that $p_f = p_m$ versus the two-sided alternative using a test statistic that relies on the normal approximation of $\hat{p}_f$ and $\hat{p}_m$.  Report a p-value.
+
+-The p value is 0.2033561
+
+```{r}
+normal<-obesity%>%
+ filter(NObeyesdad=="Normal_Weight")%>% 
+    group_by(Gender)%>%
+    summarize(n=n(),ca = sum(FAVC=="yes"), not_ca=n-ca, p_hat = ca/n)
+
+normal%>%
+ ungroup()%>%
+ summarize(est=p_hat[2]-p_hat[1],ca=sum(ca),n_1=n[2],n_2=n[1],n=sum(n),p = ca/n,se_pool = sqrt(p*(1-p)*(1/n_1+1/n_2)),z = est/se_pool,p_value=2*pnorm(-abs(z)))
+```
+
+
+
+*(b)*  What is the distribution of the test statistic assuming the null hypothesis is true?  State the name of the distribution and the values of its parameter(s).
+
+-It is standard normal distribution with mean=0, sd=1.
+
+
+
+*(c)* Interpret the results of the hypothesis test in context.
+
+-Fail to find stats significance to reject Ho
+
+
+
+
+
+
+
+
+
+
+
+
+

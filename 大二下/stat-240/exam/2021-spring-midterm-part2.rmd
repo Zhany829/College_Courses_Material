@@ -1,0 +1,104 @@
+---
+output: html_document
+geometry: margin=0.75in
+fontsize: 12pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      cache = FALSE)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+source("../scripts/viridis.R")
+```
+
+
+# Spring 2021 STAT 240 Midterm - Exam Part 2
+
+This midterm exam has Four Parts - all parts must be completed and submitted by 11:59 PM CT (local Madison, WI time) on Friday, March 12.  Once started, an Exam Part must be completed and submitted on Canvas within 60 minutes.  
+
+- You will need to agree to an honor code statement in each exam part in order to receive credit.
+- You are not allowed to communicate with anyone using any means (email, phone, text, social media, online discussion platforms, etc.) except the instructors of this course. You are allowed to use materials from the course and the internet. 
+- If you have questions during the exam, post your questions on a private post on Piazza. To do this, select the "Individual Student(s) / Instructor(s)" option next to "Post to:" when creating your post.
+- You can expect for questions to be addressed during normal working hours in Madison, WI (9 AM CT - 5 PM CT) on Friday, March 12.  Questions posted outside that window may still be addressed.
+
+
+## Part 2:  Water Main Breaks
+
+Data for this part are contained in a file called "madison_water_main_breaks.csv".
+
+These data were pulled from [this website](https://data-cityofmadison.opendata.arcgis.com/datasets/water-main-breaks/), and contains information about water main breaks in the city of Madison, Wisconsin. Details about the date of the break, the repair time, the size of the pipe, the depth of the pipe, and the soil type around the pipe are contained in the file.
+
+The variables in the data are described below:
+
+- `OBJECTID` = unique identifier for each broken pipe   
+- `break_date` = date and time the break occurred      
+- `repair_time_minutes` = the length of the repair time in minutes     
+- `pipe_size` = diameter of the pipe (in inches)    
+- `pipe_depth_ft` = how deep underground the pipe is located (in feet)  
+- `soil_type` = type of soil surrounding the broken pipe  
+
+
+## Questions
+
+
+#### Question 2.1 (5 points)  
+
+Complete the following steps and then respond to the questions.
+
+- Load the "madison_water_main_breaks.csv" data file  
+- Format `break_date` as a date (without the time component)
+- Remove rows with missing values  
+- Rename `OBJECTID` to `id`  
+- Remove observations that have a repair time of 0 minutes  
+- Create a variable called `season` that assigns the observation to a season based on its `break_date` using the following assignments:  
+    - winter = December, January, February  
+    - spring = March, April, May  
+    - summer = June, July, August  
+    - fall = September, October, November
+
+Name the resulting data frame `water`.
+
+
+After completing the steps outlined above, print out a data frame that displays the number of observations by season, and the minimum and maximum repair times by season.  Arrange the rows in decreasing order based on the number of water main breaks so the season with the highest number of breaks is in the first row.
+```{r}
+mw <- read.csv("../data/madison_water_main_breaks.csv")
+water <- mw%>%
+  mutate(break_date = as_datetime(break_date))%>%
+  drop_na()%>%
+  rename(id = "OBJECTID")%>%
+  filter(repair_time_minutes != 0)%>%
+  mutate(season = case_when(month(break_date)==03|month(break_date)==04|month(break_date)==05~"Spring",month(break_date)==06 | month(break_date)==07 | month(break_date)==08 ~"Summer",month(break_date)==09 | month(break_date)==10 | month(break_date)==11 ~"Fall", TRUE ~ "Winter")) 
+  
+water%>%
+  group_by(season)%>%
+  summarise(num_observation = n(), min_time = min(repair_time_minutes), max_time =  max(repair_time_minutes))%>%
+  arrange(-num_observation)
+
+```
+
+
+
+
+
+#### Question 2.2 (5 points) 
+
+Using your `water` data frame, create side-by-side box plots of the repair times by season including the following modifications:
+
+- Order the side-by-side box plots in decreasing order of the median repair time.  The season's box plot with the highest median repair time should be to the left, and the season's box plot with the lowest median repair time should be to the right.  
+- Color the box plots by season.  (Use `color=` not `fill=`.)  
+- Add descriptive axis labels and a meaningful title.
+
+```{r}
+ggplot(water,aes(x = reorder(season,-repair_time_minutes,median),y=repair_time_minutes,color=season))+
+  geom_boxplot()+
+  xlab("Season") +
+  ylab("Repair time(minutes)")+
+  ggtitle("Repair time(minutes) of each season")
+```
+
+

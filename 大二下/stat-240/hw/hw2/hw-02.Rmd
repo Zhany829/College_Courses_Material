@@ -1,0 +1,115 @@
+---
+author: "Zhan Yu"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+library(tidyverse)
+library(lubridate)
+```
+
+## Assignment 2
+
+
+- Execute the code in the chunk below to read in the data.
+    - If there is an error, check to see if there is a `data` directory two directories up that contains the data file.
+- Post questions on our Piazza site, visit the Learning Center, or attend office hours if you have questions.
+    
+```{r read-data, echo = FALSE}
+## The echo = FALSE argument to this chunk
+##   means that the code will not appear in the output
+##   but the code will run so that the data is in the session
+
+## Read Lake Monona data
+## Remove rows with missing data
+monona <- read_csv("../../data/lake-monona-clean-2020.csv") %>%
+  drop_na()
+```
+
+### Problems
+
+### 1
+
+The following code makes a histogram of the `days` variable in the Lake Monona data set.
+
+```{r problem1}
+ggplot(monona, aes(x=days)) +
+  geom_histogram(boundary=0,binwidth=10,color="black",fill="white")
+```
+
+Approximately how many winters had between 40 to 70 days where Lake Monona was at least 50% covered with ice?
+
+### Response
+
+11 days
+
+
+### 2
+
+Modify the code below so that:
+
+- one of the bin boundaries is at 70 days
+- the width of each bin is 5 days
+- the fill color is "cyan"
+- the color outlining the bars is "red"
+- the x label says "Days Closed with Ice"
+- the y label says "Total"
+- there is a title with words of your choosing that describe the figure
+
+```{r problem2}
+ggplot(monona, aes(x = days)) +
+  geom_histogram(boundary=70,binwidth=5,color="red",fill="cyan")+
+  ggtitle("Ice Influence")+
+  xlab("Days Closed with Ice") + 
+  ylab("Total")
+```
+
+
+### 3
+
+Code in the next chunk makes a scatter plot that shows how the variable `days` changes with time (using `year1`).
+
+```{r problem3}
+ggplot(monona, aes(x = year1, y = days)) +
+  geom_point() +
+  geom_smooth(se=FALSE)
+```
+
+- What does the line of code `geom_smooth(se=FALSE)` do?  (Explain what it does on the graphic; you don't need to explain details of the method.)
+- Describe the pattern of the curve.
+- How long was Lake Monona closed with ice in a typical year near 1875 (i.e., what is the approximate value of the smooth curve around 1875)?
+- How long was Lake Monona closed with ice in a typical year near 2000 (i.e., what is the approximate value of the smooth curve around 2000)?
+
+### Response
+
+- Add a smooth trend line.
+- Increasing with years, the amount of days closed with ice in the year is continuously fluctuating but showing a downward trend.
+- 118
+- 90
+
+
+### 4
+
+Modify the code in the following chunk so that:
+
+- There is a box plot displaying the distribution of the days frozen by ice  
+- The box plot fill color is "yellow"
+- The color of the edges of the box plot is "magenta"
+- There is a more descriptive y-axis label
+- There is an informative plot title
+
+```{r problem4}
+ggplot(monona, aes(y=days)) +
+  geom_boxplot(color="magenta",fill="yellow") +
+  ylab("Total days frozen")+
+  ggtitle("Lake Monona Freeze Durations, 1851-2020")
+```
+
+- What is the approximate median number of days Lake Monona has been closed with ice?  
+
+### Response
+
+105
+
+f

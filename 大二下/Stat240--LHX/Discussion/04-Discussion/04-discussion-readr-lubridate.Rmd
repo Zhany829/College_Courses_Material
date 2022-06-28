@@ -1,0 +1,198 @@
+---
+title: "STAT 240 Discussion 4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+source("../../scripts/viridis.R")
+```
+
+## Group 319 E (use the assigned group name/number)
+
+## Members Present
+
+- Ziling Hu, Zheng Ma
+- **Haoxuan Lu**
+
+## Members Absent
+
+- Shruthi Srinivasan
+
+## Questions
+
+### 1
+
+> The code block below reads in the data, and then modifies it. Add comments by replacing the text XXX to briefly summarize what the following line of code does.
+
+```{r atlanta}
+### Input a file where the delimiter character is a XXX
+atl = read_tsv("../../data/atlanta-2018.tsv") %>%
+  ## select the columns not ending with "wait"
+  select(-ends_with("wait")) %>%
+  ## select the columns not contains "_n_"
+  select(-contains("_n_")) %>%
+  ## select the columns except columns name "terminal","hour","all_excluded","all_booths"
+  select(-terminal,-hour,-all_excluded,-all_booths) %>%
+  ## rename the column "all_total" to "passengers" and "all_flights" to "flights"
+  rename(passengers = all_total,
+         flights = all_flights) %>%
+  group_by(airport,date) %>%
+  ## summarize and get the sum of the passengers and flights which are in the same airport and date
+  summarize(passengers = sum(passengers),
+            flights = sum(flights)) %>%
+  ## change the date data to month-day-year form
+  mutate(date = mdy(date)) %>%
+  # get the day of the week for this date and store a new column named "wday"
+  mutate(wday = wday(date, label=TRUE)) %>%
+  ## get month name for this date and store a new column named "month"
+  mutate(month = month(date, label=TRUE)) %>%
+  ## rearrange the order of the columns to "airport,date,month,wday,passengers,flights"
+  select(airport,date,month,wday,everything()) %>% 
+  ## arrange the row depend on the date column (from early to late)
+  arrange(date)
+```
+
+### 2
+
+>   After problem 1, the data frame `atl` should have one row per day of the year and include variables passengers and flights for the totals of each day. Create a summary data frame named `atl_sum` with columns for the average number of international flight arrivals per day and the average total number of daily passengers arriving on international flights per day in Atlanta by day of the week.
+This data frame will have three columns, one for day of the week, and one for each of the two quantiative variable.
+
+```{r}
+atl_sum = atl %>%
+  group_by(wday) %>% 
+  summarise(flight_avg=mean(flights),passenger_avg=mean(passengers))
+```
+
+### A
+
+> Display the summary data frame in a table with the rows arranged in order by days of the week from Sunday through Saturday.
+
+```{r}
+atl_sum 
+```
+
+### B
+
+> Display the summary data frame in a table with the rows arranged in order from most to least average number of international flight arrivals.
+
+```{r}
+atl_sum %>% 
+  slice_max(order_by = flight_avg,n=10)
+```
+
+### 3
+
+> On what single date in 2018 did the largest number of international passengers arrive at the Atlanta airport? How many passengers were there? What day of the week was this date?
+
+```{r}
+atl %>% 
+  slice_max(order_by = passengers,n=1)
+```
+
+2018-07-28, 22063 passengers were there, it is Saturday
+
+### 4
+
+> Read in the data for Chicago using the appropriate `read_*()` command. Make a bar plot that shows the mean number of passengers arriving per day to O'Hare international airport by day of the week. (Each row in the data set represents an hour of a day. You will need to transform the data to obtain the values to graph. Borrow code from problem 1 to help.)
+
+```{r}
+chi = read_csv2("../../data/chicago-2018.csv") %>%
+  select(-ends_with("wait")) %>%
+  select(-contains("_n_")) %>%
+  select(-terminal,-hour,-all_excluded,-all_booths) %>%
+  rename(passengers = all_total,
+         flights = all_flights) %>%
+  group_by(airport,date) %>%
+  summarize(passengers = sum(passengers),
+            flights = sum(flights)) %>%
+  mutate(date = mdy(date)) %>%
+  mutate(wday = wday(date, label=TRUE)) %>%
+  mutate(month = month(date, label=TRUE)) %>%
+  select(airport,date,month,wday,everything()) %>% 
+  arrange(date) %>%
+  group_by(wday) %>% 
+  summarise(flight_avg=mean(flights),passenger_avg=mean(passengers))
+
+ggplot(data = chi) +
+  geom_col(mapping = aes(x = wday, y = passenger_avg)) +
+  labs(x = "Day of the week", y = "Average Passengers")
+```
+
+### 5
+
+> Read in the data for Denver using the appropriate `read_*()` command. Make a line plot that shows the total number of international flights arriving to Denver international airport by month. (Note: add `group = 1` as an aesthetic so that there is a single line for all months.)
+
+```{r}
+den = read_csv("../../data/denver-2018.csv") %>%
+  select(-ends_with("wait")) %>%
+  select(-contains("_n_")) %>%
+  select(-terminal,-hour,-all_excluded,-all_booths) %>%
+  rename(passengers = all_total,
+         flights = all_flights) %>%
+  group_by(airport,date) %>%
+  summarize(passengers = sum(passengers),
+            flights = sum(flights)) %>%
+  mutate(date = mdy(date)) %>%
+  mutate(wday = wday(date, label=TRUE)) %>%
+  mutate(month = month(date, label=TRUE)) %>%
+  select(airport,date,month,wday,everything()) %>% 
+  arrange(date) %>%
+  group_by(month) %>% 
+  summarise(flight_sum=sum(flights),passenger_sum=sum(passengers))
+
+ggplot(data = den) +
+  geom_line(mapping = aes(x = month, y = flight_sum, group = 1))
+```
+
+### Lubridate practice
+
+Code below creates a datetime object with the current date and time.
+Write one line of code to extract from this datetime the requested information.
+(Your answers will depend on the exact time you knit the document.)
+
+```{r}
+now_dt = now()
+```
+
+### 6
+
+> The year
+
+```{r}
+year(now_dt)
+```
+
+### 7
+
+> The month as a number
+
+```{r}
+month(now_dt)
+```
+
+### 8
+
+> The day of the week as a number
+
+```{r}
+mday(now_dt)
+```
+
+### 9
+
+> The day of the week as a label
+
+```{r}
+wday(now_dt, label = TRUE, abbr = FALSE)
+```
+
+### 10
+
+> The hour
+
+```{r}
+hour(now_dt)
+```

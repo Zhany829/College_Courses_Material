@@ -1,0 +1,171 @@
+---
+title: "STAT 240 Discussion 9"
+output: html_document
+---
+
+## Group 319C 
+
+## **LILY FRANKS**, HAOXUAN LU, SHRUTHI SRINIVASAN, MICHAEL HANDLER
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+library(modelr)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Questions
+
+## Regression
+
+The simple linear regression model is that a response variable $y$ can be explained with a linear model for a variable $x$ plus random error.
+The equation
+$$
+\mathsf{E}(y) = a_1 + a_2 x
+$$
+describes a linear relationship between the expected value of $y$ and a variable $x$.
+The model is more completely specified by adding a random model
+for how the individual observations of the response variable
+vary from their expected values.
+$$
+y_i = a_1 + a_2 x_i + \varepsilon_i
+$$
+where
+$$
+\varepsilon_i \sim \text{Normal}(0,\sigma)
+$$
+where $\sigma$ is the standard deviation.
+
+## Data
+
+The following code reads in the Madison weather data
+and calculates the average winter temperature (November through February) for each year and graphs the data and a fitted linear model.
+
+```{r read-data}
+## Read and transform the Madison weather data
+mw <- read_csv("../../data/madison-weather-2020-clean.csv")
+
+mw_winter <- mw %>%
+  filter(month=="Nov" | month=="Dec" | month=="Jan" | month=="Feb") %>%
+  group_by(year) %>%
+  summarize(tavg = mean(tavg))
+
+ggplot(mw_winter, aes(x=year,y=tavg)) +
+  geom_point() +
+  geom_smooth(method="lm", se=FALSE) +
+  theme_bw()
+```
+
+## Regression Model
+
+The next block of code fits a linear model to the data
+and uses  functions `add_predictions()` and `add_residuals()`
+from the tidyverse package `modelr`
+to add columns `pred` and `resid` which contain predicted values and residuals, respectively.
+
+```{r fit-regression-model}
+fit <- lm(tavg ~ year, data=mw_winter)
+summary(fit)
+cf <- coef(fit)
+cf
+
+mw_winter <- mw_winter %>%
+  add_residuals(fit) %>%
+  add_predictions(fit)
+head(mw_winter)
+```
+
+## Simulation to Assess Uncertainty
+
+The summary of the linear fit includes numerical values for the standard errors of the estimated model parameters.
+These values are based on theoretical derivations for equations for the standard errors of the intercept and slope of a regression line.
+An alternative approach is to use simulation.
+Here are the steps of an approach known as the *parametric bootstrap*.
+
+1. Estimate the parameters of the statistical model.
+2. Use the estimated model and simulate a new data set of the same size.
+    - In a regression framework, this would involve adding to each predicted value $y^*$ a new simulated normally distributed random error from a distribution with mean zero and the estimated standard deviation.
+3. Fit a linear model to the simulated data set and estimate the coefficients.
+4. Repeat steps 3 and 4 many times.
+5. Calculate the standard deviations of the coefficients from the simulated data sets as estimates of the standard errors.
+
+## Problems
+
+### 1 
+
+Write out the estimated linear model by replacing the XXX with the estimated coefficients; y_hat represents the estimated average winter temperature in Madison for year x.  What is the interpretation of the estimated slope?
+
+y_hat = -11.983193 + 0.018711 * x
+
+Interpretation of the estimated slope: for every increment increase in the year, the temperature changes by 0.018711. 
+
+### 2
+
+> Make a density plot of the residuals from the model. Calculate the mean and standard deviation of the residuals. Overlay a normal density with these values for the mean and standard deviation.
+Does it appear that a normal distribution is a reasonable approximation of the distribution of variation of points around the regression line?
+**Use geom_norm_density(), which takes arguments mu=, sigma= (Not mean=, sd=)**
+
+```{r problem-2}
+ggplot(mw_winter) +
+  geom_density(mapping = aes(x = resid), color = "blue") +
+  geom_norm_density(mean(mw_winter$resid), sd(mw_winter$resid), color = "red")
+```
+Response: A normal distribution would work for this data because the graph displays a "normal" bell shape for the density line of the mean and sd of the residuals. Additionally, the graph isn't skewed to either side. 
+
+### 3
+
+> Make a scatterplot with `year` on the x axis and the residuals on the y axis. Add a horizontal line with a y intercept of zero.
+Are there strong patterns in the residual plot, or do the residuals resemble random noise? Briefly explain.
+
+```{r problem-3}
+ggplot(mw_winter, mapping = aes(x = year, y = resid)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0, color = "red")
+```
+Response: The only notable take away is that most of the residuals stay within the range of -5 and 5 (this isn't necessarily a pattern). If the points in a residual plot are randomly dispersed around the horizontal axis, a linear regression model is appropriate for the data; aka a linear regression model fits this data.
+
+### 4
+
+> The code below implements the parametric bootstrap described above.
+Make density plots of the bootstrap distributions of $a_0$ and $a_1$.
+Calculate the mean and standard deviation of these bootstrap distributions to three significant digits and compare with the numerical values from the linear model summary.
+Does the simulation approach agree with the original regression estimates for this data set?
+
+Note:  This simulation can be time consuming to re-run every time you knit your R Markdown file.  You can set `cache=TRUE` in your chunk header, which will avoid repeating the simulation run (unless a change is made to the chunk).  This is already done for you below, but feel free to remove the `cache = TRUE` if you prefer.
+
+```{r simulation-parametric-bootstrap, cache=TRUE}
+n <- nrow(mw_winter)
+sigma_resid <- sd(mw_winter$resid)
+N <- 10000
+a_0 <- numeric(N)
+a_1 <- numeric(N)
+
+for ( i in 1:N )
+{
+  mw_temp <- mw_winter %>%
+    mutate(temp = pred + rnorm(n,0,sigma_resid))
+  fit_temp <- lm(temp ~ year, data=mw_temp)
+  a_0[i] <- coef(fit_temp)[1]
+  a_1[i] <- coef(fit_temp)[2]
+}
+
+df_coef <- tibble(a_0,a_1)
+```
+
+```{r problem-4}
+ggplot(df_coef) +
+  geom_density(mapping = aes(x = a_0), color = "black")
+ggplot(df_coef) + 
+  geom_density(mapping = aes(x = a_1), color = "black")
+
+q4 <- df_coef %>%
+  summarise(a_0_mean = round(mean(a_0), 3), a_0_sd = round(sd(a_0), 3), a_1_mean = round(mean(a_1), 3), a_1_sd = round(sd(a_1), 3))
+q4
+
+
+summ <- data.frame(coef(summary(fit)))
+summ
+```
+Response: The simulation approach seems to agree with the original regression estimates for this data set as the values are extremely close to one another.

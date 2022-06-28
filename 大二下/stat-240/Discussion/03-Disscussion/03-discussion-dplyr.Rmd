@@ -1,0 +1,131 @@
+---
+title: "STAT 240 Discussion 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+source("../../scripts/viridis.R") # See HW03 to get the viridis.R
+```
+
+
+## Group XXX (use the assigned group name/number)
+
+## Members Present
+
+- ADD THE NAMES OF EVERYONE PRESENT
+- MAKE THE NAME **BOLD** OF THE RESPONSIBLE PERSON TO UPLOAD THE FILES FOR THE GROUP
+
+## Members Absent
+
+- ADD NAMES OF ANY ABSENT MEMBERS
+
+
+## Questions
+
+### 1
+
+The code below modifies the exoplanet data table, `planets`.  Review the code and then answer the question below the code chunk.  Some questions will require additional code to answer them.
+
+
+```{r}
+## Read in the csv files for all planets
+## There is one row for each exoplanet publication 
+planets <- read_csv("../../data/exoplanets-3sept2020.csv")
+
+planets <- planets %>%
+  filter(default_flag != 0)
+
+planets <- planets %>%
+  select(pl_name, hostname, discoverymethod, disc_year, sy_pnum, pl_rade, pl_bmasse) %>%
+  rename(planet=pl_name, star=hostname, method=discoverymethod, year=disc_year, number=sy_pnum, radius=pl_rade, mass=pl_bmasse)
+
+### Add code here as needed to address the questions.
+```
+
+>  (a) What does `filter(default_flag != 0)` do to the data frame?
+
+>  (b)  What does the `rename()` function do to the data frame?
+
+>  (c)  After running the code chunk, how many observations are in the data set?
+
+>  (d) What are the combined total number of exoplane discoveries from the years 2000, 2005, 2010, and 2015?
+
+
+
+
+**For the remaining questions, use the `planets` data from Question 1.**
+
+
+### 2
+
+> What are the names of the stars with the most discovered exoplanets orbiting it?  
+
+- Create a data frame that lists the top five stars with the most discovered exoplanets arranged from the most to the least; include the variables `star` and `number` only in your answer.   (Because of ties, there may be more than five stars listed.) 
+- In addition to other commands, you will want to use `slice_max()`.    
+- After creating the noted data frame, respond to the question below the chunk.  
+
+You may notice something strange after completing the instructions above:  the same star's name is repeated a number of times!  What's going on here?  Let's say there are 4 detected planets orbiting the same star.  Since each row of our data frame has a planet, the same host star may be listed for each of those 4 rows.  To address this and only display the star's name once, use the `distinct()` command before the `slice_max()`.
+
+```{r}
+## Add your code here
+```
+
+> What is the name of the star with the most detected exoplanets?
+
+
+
+### 3
+
+> Make a bar plot indicating the number of exoplanets discovered from the various system sizes.  The size of the exoplanet system is the variable `number`; this is the number of discovered exoplanets orbiting the same host star.  
+
+- You can use `geom_bar()`; this is reasonable here because the sizes of the systems are integers.  
+- Fill the bars with colors according to the method of detection.  
+- Remove exoplanets that were discovered using the "Imaging" or "Orbital Brightness Modulation" methods.  
+- For the `position` option in `geom_bar()`, set this equal to `position_dodge2(preserve = "single")`.  
+- Be sure to add meaningful labels to the x-axis (e.g., "Number of Exoplanets Discovered in the System") and y-axis (e.g., "Number of Exoplanets").  
+- Answer the question displayed below the chunk.
+
+Notice that this figure is counting the number of exoplanets in systems of different sizes.  This means that the vertical axis is representing the number of planets within each of the various  system sizes -- *not* the number of systems.  You could create a similar figure first by counting the number of systems of the different sizes.  However, planets within the same system may have been detected using different methods so the bar coloring would need to be adjusted.
+
+```{r}
+## Add your code here
+```
+
+>  What did `position = position_dodge2(preserve = "single")` do to the bar plot?  How does it compare to using `position = "dodge"`? (Try out both and see how they compare.)
+
+
+
+
+### 4
+
+> The Transit method of detection allows for the estimation of a planet radius and the Radial Velocity method allows for the estimation of a planet's mass.  
+
+-  Create a data frame that counts the number of missing values for the variables  `radius` and `mass` for the methods `Transit` and `Radial Velocity`.  
+-  Answer the question below the chunk.
+
+```{r}
+## Add your code here
+```
+
+> Are these numbers consistent with the Transit method allowing for the estimation of planet radius and the Radial Velocity method allowing for the estimation of a planet's mass?  Explain.
+
+
+
+### 5 (Ungraded, but here for extra practice if there is time)
+
+> Calculate the minimum, 25th percentile, mean, median, and maximum value of radius over all exoplanets that were discovered using the method `Transit` in the data set.  
+
+-  You will need to drop the missing values (`drop_na()`) before calculating the summary statistics.  When dropping missing values, you should first select only the variables you plan to use in the analysis.  This is because the `drop_na()` will drop rows if *any* of the values are missing.  For this question, you only need to consider method (to get the Transit method) and radius so you only need to remove missing values from those variables.   
+- To get the pth percentile, consider using `quantile(radius, p)`.  For example, to get the 25th percentile, you can use `quantile(radius, .25)`.  
+-  Answer the question below the chunk.
+
+```{r}
+## Add your code here
+```
+
+> Do most of these planets have an estimated radius less than, greater than, or about the same as the radius of the Earth?  (You will need to recall the units of radius:  they are in Earth radius)
+
+
+

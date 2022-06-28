@@ -1,0 +1,134 @@
+---
+output: html_document
+geometry: margin=0.75in
+fontsize: 12pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      cache = FALSE)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+source("../scripts/viridis.R")
+```
+
+
+# Spring 2021 STAT 240 Midterm Exam - Part 3
+
+This midterm exam has Four Parts - all parts must be completed and submitted by 11:59 PM CT (local Madison, WI time) on Friday, March 12.  Once started, an Exam Part must be completed and submitted on Canvas within 60 minutes.  
+
+- You will need to agree to an honor code statement in each exam part in order to receive credit.
+- You are not allowed to communicate with anyone using any means (email, phone, text, social media, online discussion platforms, etc.) except the instructors of this course. You are allowed to use materials from the course and the internet. 
+- If you have questions during the exam, post your questions on a private post on Piazza. To do this, select the "Individual Student(s) / Instructor(s)" option next to "Post to:" when creating your post.
+- You can expect for questions to be addressed during normal working hours in Madison, WI (9 AM CT - 5 PM CT) on Friday, March 12.  Questions posted outside that window may still be addressed.
+
+
+
+## Part 3:  Education Institution Data
+
+Data for this part are contained in files called "field_of_study.csv" and "institutions.csv".
+
+These data files include a subset of the data available at [this website](https://collegescorecard.ed.gov/data/).  The data files were last updated on January 19, 2021, and contain the most recently available information.
+The data files are provided for investigation of the performance of institutions that receive federal financial aid dollars, and some outcomes of the students from those institutions.   Some data elements are listed as "PrivacySuppressed" if they do not meet reporting standards.  The data documentation is available [here](https://collegescorecard.ed.gov/assets/FullDataDocumentation.pdf) and [here](https://collegescorecard.ed.gov/assets/FieldOfStudyDataDocumentation.pdf).
+
+The variables in the "field_of_study.csv" data are described below.  There is one row for each program at each institution.
+
+`UNITID` = Unique unit ID for institution  
+`INSTNM` = Institution name  
+`CIPDESC` = Text description of the field of study  
+`EARN_MDN_HI_1YR` = Median earnings of graduates working and not enrolled 1 year after completing highest credential*  
+`EARN_MDN_HI_2YR` = Median earnings of graduates working and not enrolled 2 years after completing highest credential*
+
+*Note from data website documentation: These data include only Title IV-receiving students, so figures may not be representative of institutions with a low proportion of Title IV-eligible students.  Title IV-receiving students are students who receive federal financial aid funds.
+
+The variables in the "institutions.csv" data are described below.  There is one row for each institution.  (For example, each of the University of Wisconsin locations has a separate row with a unique `UNITID`.)
+
+`UNITID` = Unique unit ID for institution  
+`INSTNM` = Institution name  
+`CITY` = City where institution is located  
+`STABBR` =  Abbreviation of state where institution is located  
+`ADM_RATE` =  Admission rate (defined as the number of admitted undergraduates divided by the number of undergraduates who applied)  
+`ACTCMMID` = Midpoint of the ACT cumulative score (defined as the midpoint of the 25th and 75th percentile)  
+`UGDS` = Enrollment of undergraduate certificate/degree-seeking students  
+`COSTT4_A` = Average cost of attendance (academic year institutions)  
+`AVGFACSAL` = Average faculty salary  
+
+
+## Questions
+
+#### Question 3.1 (5 points) 
+
+Complete the following steps and then respond to the questions.
+
+- Load the "field_of_study.csv" and "institutions.csv" data
+- Rename the following variables:  
+    - id = UNITID (both data files)
+    - school = INSTNM  (both data files)
+    - program = CIPDESC ("field_of_study.csv")
+    - salary = EARN_MDN_HI_2YR ("field_of_study.csv")
+    - state = STABBR ("institutions.csv")  
+    - adm_rate = ADM_RATE ("institutions.csv")  
+    - act = ACTCMMID ("institutions.csv") 
+    - cost = COSTT4_A ("institutions.csv") 
+    - faculty_salary = AVGFACSAL ("institutions.csv")   
+- Only include the columns in the data frames that were renamed -- all other columns should be removed  
+-  In the data frame for "field_of_study.csv", remove observations for which `salary` is "PrivacySuppressed" and then convert `salary` to be numeric  
+- Join the two data frames into a single data frame called `education` so that only institutions that are listed in both data sets are included
+
+After completing the steps outlined in the question, create a data frame from your `education` table that lists, by `state`, (i) the number of institutions and (ii) the cost of the most expensive institution in the state (`cost`).  *Note that the question asks for the number of institutions, not the number of programs.*  Print out the states with the 5 highest-cost institutions.
+```{r}
+study<- read.csv("../data/field_of_study.csv")%>%
+    rename(id = UNITID, school = INSTNM, program = CIPDESC, salary = EARN_MDN_HI_2YR)%>%
+    select(id, school, program,salary)%>%
+    filter(salary != "PrivacySuppressed")%>%
+    transform(salary = as.numeric(salary))
+institutions<- read.csv("../data/institutions.csv")%>%
+    rename(id = UNITID,school = INSTNM, state = STABBR, adm_rate=ADM_RATE,act=ACTCMMID,cost=COSTT4_A,faculty_salary = AVGFACSAL)%>%
+    select(id,school,state,adm_rate,act,cost,faculty_salary)
+
+education = study%>%
+    inner_join(institutions, c("school" ,"id"))
+output <- education%>%
+    group_by(state)%>%
+    summarise(num = n(),most_cost = max(cost,na.rm = TRUE))%>%
+    arrange(desc(most_cost))%>%
+    head(5)
+output
+```
+
+
+
+#### Question 3.2 (5 points)  
+
+Using your `education` data frame, define a variable called `program` that takes the value "data science" if "math", "statistics", "computer", "data", or "information" appear anywhere in an observation's program description (`program`); otherwise `program` takes the value "other". 
+*Hint:  when searching for the terms for the "data science" group, be sure to ignore the capitalization status of the terms.*
+
+Then create and display a scatter plot of the program-level salary information on the y-axis and the institution-level ACT score midpoint on the x-axis.  And make the following modifications:
+
+- You can drop missing values from the `act`, `salary`, or `datascience`  
+-  Color the points according to `datascience`  
+-  Adjust the transparency of the points to `alpha = .5`  
+-  Add smooth curves to the scatter plot (with `se=FALSE` so the band does not plot around the curve);  have a separate smooth curve for "data science" and for "other"  
+- Add descriptive axis labels and a meaningful title  
+-  Change the legend title to "Program"  
+
+```{r}
+education%>%
+    mutate(datascience=case_when(str_detect(str_to_lower(program), "(math)|(statistics)|(computer)|(data)|(information)")~"data science", TRUE~"other"))%>%
+    drop_na(c("act","salary","datascience"))%>%
+    ggplot(aes(x=act,y=salary,color=datascience))+
+    geom_point(alpha=.5)+
+    geom_smooth(se=FALSE)+
+    xlab("ACT Score Midpoint")+
+    ylab("Salary")+
+    guides(color=guide_legend(title="Program"))+
+    ggtitle("Relationship between Act Score and Average Salary")
+```
+
+
+
+

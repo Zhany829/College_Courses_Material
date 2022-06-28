@@ -1,0 +1,282 @@
+---
+title: "Volleyball and Regression"
+output: html_document
+---
+
+\newcommand{\given}{\,\mid\,}
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+\renewcommand{\prob}{\mathsf{P}}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=FALSE,message=FALSE)
+library(tidyverse)
+library(broom)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Volleyball
+
+- We examine data from the 2019 NCAA Division I Women's Volleyball season.
+- There are 332 such teams from 32 conferences.
+- Wisconsin is one of 14 teams in the Big 10 conference:
+    - (In the distant past, the Big 10 had only 10 members.)
+- Wisconsin had a very good team that won the Big 10 championship and was seeded #4 overall in the NCAA tournament.
+- The NCAA tournament is a single elimination tournament with 64 teams that took place over three weekends.
+    - During the first weekend, 16 teams are hosts and winners of the mini four-team tournaments advance to the second weekend as one of 16 victors.
+    - During the second weekend, 4 teams are hosts and the winners of a second set of mini four-team tournaments advance to the national semifinals.
+    - During the third weekend, there are two semi-final matches and the winners play the next day for the championship.
+    
+- We have two different related data sets to examine.
+    - One has cumulative statistics for the teams across the entire season.
+    - The second has the outcomes from each single volleyball match.
+
+## Matches
+
+- First to win three sets wins the match.
+- Must win a set by two points.
+- First four sets are played to 25 points.
+    - Fourth set only played if a team has not won all three first sets.
+    - Final winning score could be more than 25 if set is tied 24-24 at some point.
+- Fifth and final set, if needed, played to 15 points, win by two.
+
+## Explore the First Set of Data    
+
+```{r}
+vb = read_csv("../../data/volleyball-team-2019.csv")
+```
+
+#### See Wisconsin
+
+```{r}
+vb %>% 
+  filter(Team == "Wisconsin") %>% 
+  as.data.frame()
+```
+
+#### Compare Conferences by Winning Percentage
+
+```{r}
+conference = vb %>% 
+  group_by(Conference) %>% 
+  summarize(W = sum(W),
+            L = sum(L),
+            win_pct = 100 * W / (W+L)) %>% 
+  arrange(desc(win_pct))
+
+conference %>% 
+  print(n = Inf)
+```
+
+#### Examine Variables
+
+```{r}
+vb = vb %>% 
+  mutate(aces_per_set = Aces/Sets,
+         assists_per_set = Assists/Sets,
+         blocks_per_set = (`Block Solos` + `Block Assists`)/Sets,
+         digs_per_set = Digs/Sets,
+         kills_per_set = Kills/Sets,
+         errors_per_set = Errors/Sets,
+         attacks_per_set = `Total Attacks`/Sets,
+         opp_kills_per_set = `Opp Kills`/Sets,
+         opp_errors_per_set = `Opp Errors`/Sets,
+         opp_attacks_per_set = `Opp Attacks`/Sets)
+
+vb %>% 
+  summarize(mean_aps = mean(aces_per_set),
+            mean_wp = mean(Win_pct))
+
+ggplot(vb, aes(x=aces_per_set, y = Win_pct)) +
+  geom_point() +
+  geom_smooth(method = "lm", se=FALSE) +
+geom_point(aes(x=1.33, y = 0.501), color="red")
+
+vb %>% 
+  summarize(r_aces = cor(aces_per_set,Win_pct))
+```
+
+
+#### Which Variables Best Predict Winning Percentage
+
+```{r}
+## Notes:
+##  .data is a data frame
+##  .x and .y are variable names without parentheses
+##  inside the function, put double braces around .x and .y
+
+f = function(.data, .x, .y)
+{
+  out = .data %>% 
+    select({{.x}}, {{.y}}) %>% 
+    summarize(
+      mx = mean( {{.x}} ),
+      sx = sd( {{.x}} ),
+      my = mean( {{.y}} ),
+      sy = sd( {{.y}} ),
+      r = cor( {{.x}}, {{.y}} ),
+      b1 = r*sy/sx,
+      b0 = my - b1*mx
+    )
+  print( out )
+  title = with(out, paste("r =", round(r,3)," ",
+                          "xbar =", round(mx,3)," ",
+                          "sx =", round(sx,3), " ",
+                          "ybar =", round(my,3)," ",
+                          "sy =", round(sy,3)))
+  subtitle = with(out, paste("b0 =", round(b0,3)," ",
+                             "b1 =", round(b1,3)))
+
+  p = ggplot(.data, aes(x = {{.x}}, y = {{.y}})) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE) +
+    geom_vline(xintercept = out$mx, color = "red",
+               linetype = "dotted") +
+    geom_hline(yintercept = out$my, color = "red",
+               linetype = "dotted") +
+    ggtitle(title, subtitle = subtitle) +
+    theme_minimal()
+  
+  plot(p)
+  
+  return ( invisible(list(stats=out, plot=p)) )
+}
+
+f(vb, aces_per_set, Win_pct)
+f(vb, assists_per_set, Win_pct)
+f(vb, blocks_per_set, Win_pct)
+f(vb, digs_per_set, Win_pct)
+f(vb, kills_per_set, Win_pct)
+f(vb, errors_per_set, Win_pct)
+
+## Example with a very strong negative correlation
+f(vb, W, L)
+```
+
+### Get Big 10 Data
+
+```{r}
+big10 = vb %>% 
+  filter(Conference == "Big Ten")
+```
+
+### Kills per Set
+
+```{r}
+p = f(big10, kills_per_set, Win_pct)
+
+plot(p$plot)
+```
+
+### Fitted Values and Residuals
+
+- The function `lm()` is used to fit a linear model.
+    - The first argument is a formula
+    - `response ~ explanatory variables`
+    - The second argument is a data frame
+- To fit a simple regression line:
+    - The response variable is numerical 
+    - There is a single numerical explanatory variable
+    
+- Fit the regression line to predict `Win_pct` from `kills_per_set` fr the Big 10 data.
+
+```{r}
+fit = lm(Win_pct ~ kills_per_set, data = big10)
+```
+
+### See a summary of the fitted model.
+
+```{r}
+summary(fit)
+```
+
+- The values under `Estimate` are the intercept ($b_0$) and slope ($b_1$).
+- Each estimate has a standard error.
+- The `t value` is for a hypothesis test that the parameter equals zero.
+    - The test statistic is just the estimate divided by the SE
+    - This counts the number of SEs that the estimate is away from zero.
+- The value under `P(>|t|)` is the two-sided p-value
+    - This is the area in the tails outside of the test statistic and its negative.
+- You may ignore other output
+
+### Coefficients
+
+- The function `coef()` returns the estimated coefficients.
+
+```{r}
+coef(fit)
+```
+
+- The coefficients are functions of the means, standard deviations, and correlation coefficient.
+$$
+b_1 = r \times \frac{s_y}{s_x}
+$$
+$$
+b_0 = \bar{y} - b_1\bar{x}
+$$
+
+```{r}
+p$stats
+
+## Check the slope
+with(p$stats, r * sy/sx)
+coef(fit)[2]
+
+## Check the intercept
+with(p$stats, my - b1*mx)
+coef(fit)[1]
+```
+
+### Regression Line
+
+- The regression line is
+$$
+(\widehat{\text{Win_pct}}) = -1.35 + 0.149(\text{kills per set})
+$$
+
+- The *fitted values* are the predicted $y$ values.
+    - The are the values if you move the points vertically to the line.
+
+- The residuals are the difference between the actual values and the fitted values.
+    - positive for points above the line
+    - negative for points below the line
+    
+- We can use the function `augment()` from the **broom** package to add residuals and fitted values to a data frame.
+    - The data frame is formed with `augment(fit)`
+    - The variable `.fitted` has the fitted values
+    - The variable `.resid` has the residuals
+- Only the `x` and `y` variables are retained.
+    - Here, I add back in the `Team` variable
+    
+```{r}
+big10_aug = augment(fit) %>% 
+  bind_cols(big10 %>% select(Team)) %>% 
+  select(Team, kills_per_set, Win_pct, .fitted, .resid)
+```
+
+- Iowa is the team with most extreme residual.
+- Add the fitted value and residual to the plot.
+
+```{r}
+iowa = big10_aug %>% 
+  filter(Team == "Iowa")
+
+p$plot +
+  geom_point(aes(x=kills_per_set, y=Win_pct),
+             data = iowa,
+             color = "red") +
+  geom_point(aes(x=kills_per_set, y=.fitted),
+             data = iowa,
+             color = "red", pch=1) +
+  geom_segment(aes(x = kills_per_set, y=Win_pct,
+                   xend = kills_per_set, yend = .fitted),
+               data = iowa,
+               color = "red", linetype = "dashed")
+
+iowa
+```
+
+
+
+

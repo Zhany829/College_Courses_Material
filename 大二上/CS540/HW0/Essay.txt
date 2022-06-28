@@ -1,0 +1,47 @@
+Name: Zhan Yu
+Word Count: 544
+								AI Essay
+		The first two sections of this report mainly introduced the definition and development trend of artificial intelligence, 
+and pointed out that artificial intelligence has become more and more common in the information age and the emergence of the Internet. It 
+will soon be applied to many aspects of production and life, such as manufacturing, Internet customer service, sales, data collection and 
+processing, education, medical care and other fields. These fields can actually see the application of artificial intelligence. However, 
+some of the views in the report are not very convincing and accurate, and can be challenged.
+		First, the report points out that autonomous transportation will soon become commonplace in North American cities in 2030.
+ Moreover, there will be fewer cars and even aircraft due to autonomous flight. Nonetheless, it will take longer to achieve autonomous 
+driving because there are many challenges. Safety, the most important requirement for autonomous driving, cannot be realized immediately 
+because of the three main challenges: edge computing system design, V2X applications and self-driving car safety. In the design of edge 
+computing systems, scientists are faced with a systematic challenge, that is, to provide more computing power with reasonable energy 
+consumption, and to ensure the safety of autonomous vehicles even at high speeds. 
+		If safety is compromised to any degree, the safety of autonomous vehicles will be threatened. Since each self-driving car 
+is equipped with many sensors and computing units, the attacker will target one of the sensors, computing system, control system or 
+communication network to make the attacked vehicle confused, blind or even take over its control. , Leading to a catastrophic accident.
+The time to address these challenges is unknown, but certainly not short (SHAOSHAN LIU,* et al., 2019, p.4). Therefore, I do not believe 
+that the point in the report which indicates the autonomous driving will be implemented on a large scale is reasonable.
+		In additional, this report points out that reinforcement learning has existed for decades as a framework for 
+experience-driven sequential decision-making, but it has not achieved great success in practice, mainly due to the representation and 
+expansion problems. Nevertheless, scientists have proved that reinforcement learning can help robots avoid collisions,which shows the 
+practical effects of reinforcement learning. Using reinforcement learning algorithms based on policy gradients, multiple robots can be 
+used in a rich and complex environment at the same time. Afterwards, scientists verify the learned sensor-level collision avoidance 
+strategies in real scenarios. The universality of the learning strategy is verified in a set of invisible scenarios. Finally, they show 
+that the collision avoidance strategies learned from the multi-robot navigation task provide a effective collision avoidance solution for 
+a single robot working in a dense real crowd (Tingxiang Fan1*,* et al., 2020, p.1). Therefore, the point that reinforcement learning does 
+not make a big breakthrough in the report is not accurate.
+		To sum up, I mainly challenges two point in the report that are about the future development of autonomous driving and 
+status of reinforcement learning.
+As what the report indicates, Sako (2020) also claims that the impact of artificial intelligence on future work should be framed from the 
+perspective of tasks and automated by artificial intelligence. AI replaced some tasks, supplemented other tasks, and created new tasks 
+(p. 27). However, some predictions cannot be believed blindly.
+
+
+								References	
+Mari Sako. Technology Strategy and Management Artificial Intelligence and the Future of Professional Work. Retrieved in 9/6/2020
+
+SHAOSHAN LIU, Senior Member IEEE, LIANGKAI LIU, JIE TANG, Member IEEE, BO YU, Member IEEE, YIFAN WANG, AND WEISONG SHI, Fellow 	IEEE 
+(2019, p. 1) Edge Computing for Autonomous Driving: Opportunities and 	Challenges. Retrieved in 9/6/2020
+
+Tingxiang Fan1* , Pinxin Long2* , Wenxi Liu3 and Jia Pan1 (2020, p, 1). Distributed multi-robot collision avoidance via deep reinforcement
+ learning for navigation in complex scenarios. Retrieved in 9/6/2020
+
+
+
+	

@@ -1,0 +1,227 @@
+---
+output: html_document
+geometry: margin=0.75in
+fontsize: 12pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      cache = FALSE)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(modelr)
+source("../scripts/viridis.R")
+```
+
+
+
+# Spring 2021 STAT 240 Final Exam - Part 1
+
+This final exam has TWO Parts - both parts must be completed and submitted by 11:59 PM CT (local Madison, WI time) on Wednesday, May 5.  Once started, an Exam Part must be completed and submitted on Canvas within 4 hours.  
+
+- You will need to agree to an honor code statement in each exam part in order to receive credit.
+- You are not allowed to communicate with anyone using any means (email, phone, text, social media, online discussion platforms, etc.) except the instructors of this course. You are allowed to use materials from the course and the internet. 
+- If you have questions during the exam, post your questions on a private post on Piazza. To do this, select the "Individual Student(s) / Instructor(s)" option next to "Post to:" when creating your post.
+- You can expect for questions to be addressed during normal working hours in Madison, WI (9 AM CT - 5 PM CT) on Wednesday, May 5.  Questions posted outside that window may still be addressed.
+
+
+## Part 1: Boston Marathon Data
+
+- The data file is *TIM.txt*, which is posted on Canvas.
+
+- A marathon is a 26.2 mile (42.2 km) running race.  
+- The Boston Marathon is an annual marathon that usually occurs in April, and is organized by the Boston Athletic Association.  
+- The first Boston Marathon took place on April 19, 1897.  
+- To run in the Boston Marathon, one must complete a marathon with a specified qualifying time  
+- The data can also be found at https://rls.sites.oasis.unc.edu/boston.html  
+- The [Readme.pdf](https://rls.sites.oasis.unc.edu/faculty/rs/Bostonwebpage/Readme.pdf) file explains the variables in the *TIM.txt* file.   
+- The initial analysis of this data set is summarized in a paper titled [*Completing the Results of the 2013 Boston Marathon*](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0093800) by Hammerling et al (2014) in PLOS ONE.
+
+
+The file *TIM.txt* contains the full data set for all 69,923 runners for 2013, 2011, 2010 combined. 
+
+The variables included in this file are:
+
+* BibNum: Bib number
+* Year: which year the participant ran the race (2013, 2011 or 2010)
+* Age: Age on race day
+* Gender1F2M: =1 if the participant was female, =2 if male
+* StartHr, StartMin: 2013 participants only: the exact time the participant crossed the start line (StartHr is the hour, StatMin is minutes including decimal parts of a minute). 
+* K0-5: Split time from the start to 5km (minutes and decimal parts of a minute)
+* K5-10: Split time from 5km to 10km (minutes and decimal parts of a minute)  
+* K10-15: Split time from 10km to 15km (minutes and decimal parts of a minute)  
+* K15-20: Split time from 15km to 20km (minutes and decimal parts of a minute)  
+* K20-25: Split time from 20km to 25km (minutes and decimal parts of a minute)  
+* K25-30: Split time from 25km to 30km (minutes and decimal parts of a minute)  
+* K30-35: Split time from 30km to 35km (minutes and decimal parts of a minute)   
+* K35-40: Split time from 35km to 40km (minutes and decimal parts of a minute)  
+* K40-Fin: Split time from 40km to finish (minutes and decimal parts of a minute)  
+* HalfMar: Split time at half marathon
+* Age2014: For 2013 entrants, age on 4/21/2014 (date of next Boston marathon) 
+
+The following code chunk reads in the *TIM.txt* data file (you may need to adjust the path to the data), and makes the following modifications to the data frame.
+
+The following variables are renamed:
+
+  - `bib` = `BibNum` and changed to a character type  
+  - `year` = `Year`  
+  - `age` = `Age`  
+  - `sex` = `Gender1F2M`, change 1 to F and 2 to M  
+  
+These variables are removed:  `StartHr`, `StartMin`, `HalfMar`, `Age2014`
+  
+Also, the data set is filtered to only include the years 2011 and 2012 (i.e., observations from 2013 are removed).
+  
+```{r}
+tim <- read_delim("../data/TIM.txt", delim=" ", guess_max = 20000) %>%
+  rename(bib = BibNum,
+         year = Year, 
+         age = Age, 
+         sex = Gender1F2M) %>%
+  mutate(bib = as.character(bib),
+         sex = case_when(
+           sex == 1 ~ "F",
+           sex == 2 ~ "M"
+         )) %>%
+  select(-c(StartHr,StartMin,HalfMar, " Age2014")) %>%
+  filter(year != 2013)
+```
+
+Use the `tim` data frame to address the following questions.
+
+
+
+#### Question 1.1 (5 points) 
+
+- Create a new variable called `final` that gives the total time each runner took to run the marathon.  This will involve summing the spit times; the split times are provided in 5 KM intervals starting with `K0-5` through `K35-40`, and the final interval, `K40-Fin`, which is 2.2 KM.  
+- Add a variable `speed` that has two possibles values,"Fast" or "Slow", depending on if the runner finished the marathon in under 3.5 hours or greater than or equal to 3.5 hours, respectively.  
+- Add a variable `sex_speed` that has four possible values, "M_Fast", "M_Slow", "F_Fast", "F_Slow", for runners labels with `sex` equal to "M" and `speed` equal to "Fast", `sex` equal to "M" and `speed` equal to "Slow", `sex` equal to "F" and `speed` equal to "Fast", `sex` equal to "F" and `speed` equal to "Slow", respectively.  
+- Print out a table that lists the  `sex_speed` category and the number of runners in the category.  
+
+
+```{r}
+tim <-tim%>%
+  mutate(final = rowSums(across(starts_with("K")), na.rm=TRUE))%>%
+  mutate(speed=final/60)%>%
+  mutate(speed=if_else(speed<3.5,"Fast", "Slow"))%>%
+  mutate(sex_speed=case_when(sex=="M"&speed=="Fast"~"M_Fast",
+                             sex=="M"&speed=="Slow"~"M_Slow",     
+                             sex=="F"&speed=="Fast"~"F_Fast",
+                             sex=="F"&speed=="Slow"~"F_Slow"))
+tim%>%
+  group_by(sex_speed)%>%
+  summarise(sex_speed=sex_speed, num_runner = n())%>%
+  distinct()
+```
+
+
+
+
+
+#### Question 1.2 (6 points) 
+ 
+- Display a plot that has a point of `size=3` at the sample mean of the final time for each of the four categories of the `sex_speed` variable.  Color each point according to the category of `speed` ("Fast" or "Slow").  
+- Add a blue (vertical) line segment to visualize a 90% confidence interval for the mean final time for each `sex_speed` category. The lines should extend vertically from the lower bound to the upper bound of the confidence interval, and the point estimate from the previous step will be in the middle of the interval.  
+-  Add a horizontal red dashed line at 3.5 hours.  
+-  Label axes appropriately and add an informative title to the plot.
+
+Hint: Your final plot should have four vertical segments for the confidence intervals, a point in the center of each vertical line, and a horizontal dashed line.
+```{r}
+q2 <- tim%>%
+  group_by(sex_speed)%>%
+  mutate(n = n(),
+  mean = mean(final/60),
+  se = sd(final)/sqrt(n),
+  speed = speed,
+  t = abs(qt(.05,n-1)))
+
+ggplot(q2,aes(x=sex_speed,xend=sex_speed))+
+  geom_point(aes(y=mean,color=speed), size=3)+
+  geom_hline(yintercept = 3.5, color = "red", linetype = "dashed")+
+  geom_segment(aes(y=mean-t*se,yend=mean+t*se), color="blue")+
+  labs(x = "Sex Speed", y = "Average Finish Time", title = "90% Confidence Intervals for Final Time by Sex Speed.")+
+  theme_bw()
+```
+
+
+
+#### Question 1.3 (5 points) 
+
+- Consider only the runners with `speed` = "Slow".   
+- Assume that each runners' final time are independent.  
+- Test the hypothesis that $\mu_F = \mu_M$ versus the two-sided alternative, where $\mu_F$ is the average final time for ("Slow") Female runners and $\mu_M$ is the average final time for ("Slow") Male runners.
+
+*(a)* What is the value of the observed test statistic 
+
+-The observed test statistic is -1.69212
+```{r}
+q3 = tim%>%
+  filter(speed=="Slow")
+
+t.test(filter(q3, sex == "M")$final,
+       filter(q3, sex == "F")$final,
+       alternative = "two.sided")$statistic
+```
+
+
+*(b)* What is the distribution of the test statistic assuming the null hypothesis is true? State the name of the distribution and the values of its parameter(s).
+
+-The distribution is t distribution with degree of freedom 30650
+
+*(c)* What is your computed p-value?
+
+-The p_value is 0.09063333
+```{r}
+t.test(filter(q3, sex=="M")$final,
+       filter(q3, sex=="F")$final,
+       alternative="two.sided")[3]
+```
+
+
+*(d)* Interpret the result of the hypothesis test in context.
+
+-If we suppose the significance level is 5%. Then p-value is bigger than significance level. Therefore,we do not have strong enough evidence to reject the null hypothesis,which means we can conclude that $\mu_F =\mu_M$ is correct.
+
+
+#### Question 1.4 (6 points) 
+
+Suppose we are interested in predicting the finishing times from the 2011 Boston Marathon for Female runners who are greater than 65 years old using only the split time from the `K0-5` split (the first 5 KM of the marathon).
+
+Do the following:
+
+- Create a data frame called `df2011` that only includes Female runners from the 2011 Boston Marathon who are older than 65 years old (i.e., do not include runners who are 65 years old or younger).  
+- Fit a least-squares regression model using the runners from `df2011` where the response variable is `final` and the explanatory variable is `K0-5`.  
+
+
+*(a)*  Report the estimated slope and it's p-value.  
+
+-The estimated slope is 10.27203
+-The p_value is 4.561658e-12
+```{r}
+df_q4a <- tim %>%
+  filter(sex=="F"&age>65&year==2011)
+
+lm0 <- lm(final~`K0-5`,df_q4a)
+summary(lm0)
+coef(summary(lm0))[2, "Estimate"]
+coef(summary(lm0))[2, "Pr(>|t|)"]
+```
+
+
+*(b)* Is there a statistically significant linear relationship between `final` and `K0-5`?  Explain.  
+-Yes,there is a statistically significant linear relationship between these two variable since it's p-value is less than 0.05.
+
+*(c)*  Describe one approach for verifying that a linear model assumption is satisfied.  (You only need to specify one check.  You do not need to carryout the approach, just briefly describe one thing you would do to verify one of the linear model assumptions.)
+
+-check normality of error distribution
+
+
+
+
+
+
+

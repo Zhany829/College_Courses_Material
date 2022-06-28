@@ -1,0 +1,185 @@
+---
+title: "STAT 240 Discussion 6"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      include=TRUE)
+library(tidyverse)
+library(stringr)
+source("../../scripts/viridis.R")
+```
+
+## Group Number XXX (use the assigned group name)
+
+## Members Present
+
+- SHRUTHI SRINIVASAN, ZHENG MA, ZILING HU
+- **HAOXUAN LU**
+
+## Members Absent
+
+- ADD NAMES OF ANY ABSENT MEMBERS
+
+## Create Data Frames
+
+Make data frames
+that also have an index variable which is the row number.
+
+```{r make-data}
+df_words = tibble(
+  index = seq_along(stringr::words),
+  words = stringr::words)
+
+df_colors = tibble(
+  index = seq_along(colors()),
+  colors = colors())
+```
+
+### 1
+
+> Find the lengths of all strings in `df_words` and make a histogram that shows the number of words for each length. Use wise choices for the boundary and binwidth. *(Hint: use `mutate()` to add a column to `df_words` and use `str_length()` to calculate the value to put into this column.)*
+
+> After making a histogram, make a bar chart with the same information. Which do you prefer and why?
+
+```{r problem-1}
+df_words_len <- df_words %>%
+  mutate(length = str_length(words))
+
+ggplot(data = df_words_len) +
+  geom_histogram(mapping = aes(x = length), center = 6, binwidth = 1)
+
+ggplot(data = df_words_len) +
+  geom_bar(mapping = aes(x = length))
+```
+
+### Response
+
+- It seems two plots are the same. The histogram displays a range for the length of string like [3,4), while the barplot displays the whole number of the length of string like 3 or 4. So the barplot can be better.
+
+### 2
+
+> The R command `colors()` returns an array with all of the color names that R knows about. Filter to find all colors that contain the pattern "red". *(Hint: use `str_detect()`.)*. Report the number of colors and the first and last of these alphabetically.
+
+```{r problem-2}
+df_colors %>%
+  filter(str_detect(colors, "red")) %>%
+  arrange(colors)
+```
+
+### Response
+
+- There are 27 colors contain the pattern "red". The first is "darkred" and the last is "violetred4"
+
+### 3
+
+> How many words in `df_words` begin with each letter? Do not distinguish between lower case and capital letters. Make a bar graph that displays these counts. Then repeat for the last letter of each word. *(Hint: use `mutate()` and `str_sub()` to create new columns with the first and last letter of each word and then make the graphs. Use either `str_to_lower()` or `str_to_upper()` to before counting.)*
+
+```{r problem-3}
+df_begin_end <- df_words %>%
+  mutate(begin = str_to_lower(str_sub(words, 1 , 1)), end = str_to_lower(str_sub(words, -1, -1)))
+
+df_begin_end %>%
+  group_by(begin) %>%
+  summarise(count = n()) %>%
+  ggplot() +
+  geom_col(mapping = aes(x = begin, y = count))
+
+df_begin_end %>%
+  group_by(end) %>%
+  summarise(count = n()) %>%
+  ggplot() +
+  geom_col(mapping = aes(x = end, y = count))
+```
+
+### 4
+
+> Find all words in `df_words` that begin and end with the most popular letter (regardless of capitalization) for each position. Report the number of such words and the first and last in alphabetical order. *(Hint: Use `filter()` with `str_detect()` and a regular expression to identify the words. Then use `summarize()` to answer the questions.)*
+
+```{r problem-4}
+df_begin_end %>%
+  group_by(begin) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) # the most popular begin is letter "s"
+
+df_begin_end %>%
+  group_by(end) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) # the most popular end is letter "e"
+
+df_s_e <- df_words %>%
+  filter(str_detect(words, "^s.+e$")) %>%
+  arrange(words) 
+df_s_e
+
+df_s_e%>%
+  summarise(count = n())
+
+```
+
+### Response
+
+- There are 35 such words and the first one is "safe" and the last one is "surprise"
+
+### 5
+
+> Find and display all words in `df_words` that begin with a capital letter.
+Then, write them with that letter replaced by a lower case letter.
+How many such words are there?
+*(Hint: Use `filter()` and `str_detect()` with a regular expression involving `^[:upper:]`) to find the words and `str_c()`, `str_to_lower()` and `str_sub()` inside of `mutate()` to solve the problem.)*
+
+```{r problem-5}
+df_upper <- df_words %>%
+  filter(str_detect(words, "^[:upper:]"))
+
+df_upper %>%
+  mutate(words = str_c(str_to_lower(str_sub(words, 1, 1)), str_sub(words, 2, -1)))
+  
+```
+
+### Response
+
+- There are 2 words.
+
+### 6
+
+> Create a string named `color_string` which has all of the colors in `df_colors()` that do not contain digits separated by the symbol `|` arranged alphabetically.
+How many such colors are there?
+Display the first 30 characters of `color_string`.
+*(Hint: Use `str_detect()` and `[:digit:]` to `filter()` the appropriate rows, `pull()` to extract a column as a vector, and `str_c()` with argument `collapse` set appropriately.)*
+
+```{r problem-6}
+df_color_nodigit <- df_colors %>%
+  filter(!str_detect(colors, "[:digit:]")) %>%
+  arrange(colors)
+df_color_nodigit
+
+color_string <- str_c(df_color_nodigit %>%
+  pull(), collapse = "|")
+str_sub(color_string, 1, 30)
+  
+```
+
+### Response
+
+- There are 143 colors
+
+### 7
+
+> Find all words in `df_words` that match a color in `color_string` exactly. Display the list.
+How many such words are there?
+*(Hint: Use `str_match()` inside of `mutate()` to create a column named `match` which saves the pattern where `words` matches `color_string`, drop missing values, and then `filter()` to keep only those cases where there is an exact match between the word and the matching pattern.)*
+
+```{r problem-7}
+df_words %>%
+  mutate(match = str_match(words, color_string)) %>%
+  drop_na() %>%
+  filter(words == match)
+```
+
+### Response
+
+- There are 5 words

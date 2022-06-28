@@ -1,0 +1,166 @@
+---
+title: "STAT 240 Discussion 8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Group 4 DIS 314
+
+## Members Present
+
+- Wai Zin Linn, Will Hu
+- **ZHAN YU**
+
+## Members Absent
+
+- Martin Lozano
+
+## Questions
+
+### 1
+
+(a) A fair coin is tossed repeatedly until the tenth head is tossed. $X_1$ is the number of tails tossed prior to the tenth head.
+
+
+-This does not fit in binomial model, because the number of trials isn't decided before the experiment. 
+
+
+(b) Four buckets each contain a total of five tokens each, some red and some blue. The number of red tokens in the buckets are 1, 2, 3, and 4 with blue tokens making up the remainder. One token is drawn at random from each bucket. $X_2$ is the total number of red tokens drawn.
+
+-This does not fit in binomial model, because the trials don't have the same probability of success.
+
+
+(c) A random sample of students in a fitness study. $X_3$ is the mean systolic blood pressure of the sample.
+
+-This does not fit in binomial model, because the blood pressure is a continuous variable, and the result is not binomial.
+
+### 2
+
+Create a data frame with columns `n`, `p`, `x`, `mu`, and `prob` where:
+
+- `n` varies from 2 to 100 by twos (so each `n` value is even:  2, 4, 6, 8, ..., 100);
+- `p` equals 0.5;
+- `x` is `n`/2;
+- `mu` is the mean of the Binomial distribution with parameters `n` and `p`;
+- `prob` is $P(X = x)$, where X~Binomial(`n`, `p`)
+
+Show the first few rows using `head()`, then respond to the question below.
+
+
+```{r}
+q2 <- tibble(
+  n = seq(2, 100, 2),
+  p = 0.5,
+  x = n / 2,
+  mu = n * p,
+  prob = dbinom(x, n, p)
+)
+
+head(q2)
+```
+What is the relationship between `x` and `mu`?
+
+-They are the same
+
+
+### 3
+
+The central limit theorem implies that the binomial distribution converges to a normal distribution as $n$ increases.  This problem will examine one aspect of the convergence, namely the right tail probability of being more than two standard deviations above the mean, $P(X > \mu + 2\sigma)$.
+
+**(a)** What is the probability that a normal random variable with mean $\mu$ and standard deviation $\sigma$ exceeds $\mu + 2 \sigma$? Display answer rounded to four decimal places.
+
+```{r}
+round(1 - pnorm(2, 0, 1), 4)
+```
+
+Response: 0.0228
+**(b)** 
+
+Create a data frame with columns `n`, `p`, `mu`, `sigma`, `x`, and `prob` where:  
+- `n` varies from 1 to 1000 by ones (1, 2, 3, ..., 1000);  
+- `p` equals 0.5;  
+- `mu` is the mean of the Binomial distribution with parameters `n` and `p`;
+- `sigma` is the standard deviation of the Binomial distribution with parameters `n` and `p`;
+- `x` equals `mu` + 2*`sigma`;  
+- `prob` is $P(X > x)$, where X~Binomial(`n`, `p`)
+
+Display the first few rows of the data frame with `head()`.
+```{r}
+q3_0.5 <- tibble(
+  n = seq(1, 1000, 1),
+  p = 0.5,
+  mu = n * p,
+  sigma = sqrt(n * p * (1-p)),
+  x = mu + 2*sigma,
+  prob = 1 - pbinom(x, n, p)
+)
+head(q3_0.5)
+```
+
+**(c)** Plot the right tail probabilities versus $n$, and carryout the following modifications:
+
+- Add a red, dashed, horizontal line at the value you found in part **(a)**.  
+- Add a smooth curve which lessens the visual impact of the oscillations due to the discreteness of the binomial distribution.
+```{r}
+ggplot(q3_0.5, mapping = aes(x = n, y = prob)) + 
+  geom_line() +
+  geom_hline(aes(yintercept = round(1 - pnorm(2, 0, 1), 4)), linetype="dashed", color = "red") +
+  geom_smooth()
+```
+
+**(d)** Repeat parts **(b)** and **(c)** if $p = 0.005$.
+```{r}
+q3_0.005 <- tibble(
+  n = seq(1, 1000, 1),
+  p = 0.005,
+  mu = n * p,
+  sigma = sqrt(n * p * (1-p)),
+  x = mu + 2*sigma,
+  prob = 1 - pbinom(x, n, p)
+)
+head(q3_0.005)
+```
+
+```{r}
+ggplot(q3_0.005, mapping = aes(x = n, y = prob)) + 
+  geom_line() +
+  geom_hline(aes(yintercept = round(1 - pnorm(2, 0, 1), 4)), linetype="dashed", color = "red") +
+  geom_smooth()
+```
+
+**(e)**
+
+Ignoring the oscillations, how do the patterns of the two smooth curves in the graphs differ from one another, especially when $n$ is large?
+
+-When $n$ is larger, the smooth curves close to the value we found in part a more quickly as the n increase. 
+
+### 4
+
+Draw a graph of the binomial distribution with $(n=500, p = 0.5)$ and a graph for the binomial distribution with $(n=500, p = 0.005)$; you may use the `gbinom` function in the *ggprob.R* script.
+Scale these graphics so that the x axis is restricted to where the probabilities are relatively large; set `scale=TRUE` in the `gbinom` function to accomplish this.  
+
+Overlay each plot with a red normal density with a mean and standard deviation that matches the mean and standard deviation of the corresponding binomial distribution.  Consider the `geom_norm_density` function in the *ggprob.R* script.
+
+Compare the skewness of the distributions and comment on how this might help explain the differences in the right tail probabilities from Problem 3.
+-Answer: Due to its bell shape, Binomial(500, 0.5) has a normal distribution, whereas Binomial(500, 0.005) has very few trials and is therefore positively skewed. 
+
+```{r}
+gbinom(500, 0.5, a = 200, b = 300) + 
+  geom_norm_density(500*0.5, sqrt(500 * 0.5 * (1-0.5)), scale = TRUE, color = "red") + 
+  xlab("n")
+
+gbinom(500, 0.005, a = -5, b = 9) + 
+  geom_norm_density(500*0.005, sqrt(500 * 0.005 * (1-0.005)), scale = TRUE, color = "red") + 
+  xlab("n")
+```
+
+
+
+
+

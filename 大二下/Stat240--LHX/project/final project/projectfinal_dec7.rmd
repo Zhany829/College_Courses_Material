@@ -1,0 +1,549 @@
+---
+title: "An Analysis of Generational Drug Use "
+author: "Lily Franks, Shruthi Srinivasan, Haoxuan Lu, Michael Handler"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warnings=FALSE)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+```
+
+```{r, include=FALSE}
+drugs2 <- read_csv("https://github.com/fivethirtyeight/data/raw/master/drug-use-by-age/drug-use-by-age.csv")
+drugs_generation <- drugs2 %>%
+  mutate(generation = case_when(age == "12" ~ "younger", 
+                                age == "13" ~ "younger", 
+                                age == "14" ~ "younger", 
+                                age == "15" ~ "younger", 
+                                age == "16" ~ "younger", 
+                                age == "17" ~ "younger", 
+                                age == "18" ~ "younger", 
+                                age == "19" ~ "younger", 
+                                age == "20" ~ "younger", 
+                                age == "21" ~ "younger", 
+                                age == "22-23" ~ "younger", 
+                                age == "24-25" ~ "younger", 
+                                age == "26-29" ~ "younger", 
+                                age == "30-34" ~ "older", 
+                                age == "35-49" ~ "older", 
+                                age == "50-64" ~ "older", 
+                                age == "65+" ~ "older", )) %>%
+  group_by(generation) %>%
+  summarise(pop = sum(n),
+            `Alcohol Use` = sum(`alcohol-use` * n, na.rm = TRUE) / pop, 
+            `Marijuana Use` = sum(`marijuana-use` * n, na.rm = TRUE) / pop, 
+            `Cocaine Use` = sum(`cocaine-use` * n, na.rm = TRUE) / pop, 
+            `Crack Use` = sum(`crack-use` * n, na.rm = TRUE) / pop, 
+            `Heroin Use` = sum(`heroin-use` * n, na.rm = TRUE) / pop, 
+            `Hallucinogen Use` = sum(`hallucinogen-use` * n, na.rm = TRUE) / pop, 
+            `Inhalant Use` = sum(`inhalant-use` * n, na.rm = TRUE) / pop, 
+            `Pain Releiver Use` = sum(`pain-releiver-use` * n, na.rm = TRUE) / pop, 
+            `Oxycontin Use` = sum(`oxycontin-use` * n, na.rm = TRUE) / pop, 
+            `Tranquilizer Use` = sum(`tranquilizer-use` * n, na.rm = TRUE) / pop, 
+            `Stimulant Use` = sum(`stimulant-use` * n, na.rm = TRUE) / pop, 
+            `Meth Use` = sum(`meth-use`* n, na.rm = TRUE) / pop, 
+            `Sedative Use` = sum(`sedative-use` * n, na.rm = TRUE) /pop
+            )
+                                
+generations <- drugs_generation %>%
+  pivot_longer(cols = ends_with("Use"), names_to="drug", values_to="percentage") %>%
+  mutate(percentage = round(percentage, digits=2)) 
+
+order <- generations %>%
+  filter(generation == "younger") %>%
+  arrange(desc(percentage))
+
+generations$drug <- factor(generations$drug, levels = order$drug)                              
+
+###QUESTION ONE CODE
+d <-  read_csv("https://github.com/fivethirtyeight/data/raw/master/drug-use-by-age/drug-use-by-age.csv") 
+d<-mutate(d, generation=case_when(age=="12"~"Gen Z",
+                               age=="13"~"Gen Z",
+                               age=="14"~"Gen Z",
+                               age=="15"~"Gen Z",
+                               age=="16"~"Millenial",
+                               age=="17"~"Millenial",
+                               age=="18"~"Millenial",
+                               age=="19"~"Millenial",
+                               age=="20"~"Millenial",
+                               age=="21"~"Millenial",
+                               age=="22-23"~"Millenial",
+                               age=="24-25"~"Millenial",
+                               age=="26-29"~"Millenial",
+                               age=="30-34"~"Gen X",
+                               age=="35-49"~"Gen X",
+                               age=="50-64"~"Boomer",
+                               age=="65+"~"Boomer",
+                               ))%>%
+rename(alcohol_use="alcohol-use", marijuana_use="marijuana-use", cocaine_use="cocaine-use", crack_use="crack-use", heroin_use="heroin-use", hallucinogen_use="hallucinogen-use", inhalant_use="inhalant-use", pain_releiver_use="pain-releiver-use", oxycontin_use="oxycontin-use", tranquilizer_use="tranquilizer-use", stimulant_use="stimulant-use", meth_use="meth-use", sedative_use="sedative-use", alcohol_frequency="alcohol-frequency", marijuana_frequency="marijuana-frequency", cocaine_frequency="cocaine-frequency", crack_frequency="crack-frequency", heroin_frequency="heroin-frequency", hallucinogen_frequency="hallucinogen-frequency", inhalant_frequency="inhalant-frequency", pain_releiver_frequency="pain-releiver-frequency", oxycontin_frequency="oxycontin-frequency", tranquilizer_frequency="tranquilizer-frequency", stimulant_frequency="stimulant-frequency", meth_frequency="meth-frequency", sedative_frequency="sedative-frequency")
+
+
+d_use<-select(d, "age", "n", "generation" ,"alcohol_use", "marijuana_use", "cocaine_use", "crack_use", "heroin_use", "hallucinogen_use", "inhalant_use", "pain_releiver_use", "oxycontin_use", "tranquilizer_use", "stimulant_use", "meth_use", "sedative_use")
+
+d_frequency<-select(d, "age", "n", "generation" ,"alcohol_frequency", "marijuana_frequency", "cocaine_frequency", "crack_frequency", "heroin_frequency", "hallucinogen_frequency", "inhalant_frequency", "pain_releiver_frequency", "oxycontin_frequency", "tranquilizer_frequency", "stimulant_frequency", "meth_frequency", "sedative_frequency")
+
+users<-d_use%>%
+  mutate(alcohol_users=n*(alcohol_use/100),
+         marijuana_users=n*(marijuana_use/100),
+         cocaine_users=n*(cocaine_use/100),
+         crack_users=n*(crack_use/100),
+         heroin_users=n*(heroin_use/100),
+         hallucinogen_users=n*(hallucinogen_use/100),
+         inhalant_users=n*(inhalant_use/100),
+         pain_releiver_users=n*(pain_releiver_use/100),
+         oxycontin_users=n*(oxycontin_use/100),
+         tranquilizer_users=n*(tranquilizer_use/100),
+         stimulant_users=n*(stimulant_use/100),
+         meth_users=n*(meth_use/100),
+         sedative_users=n*(sedative_use/100))%>%
+  group_by(generation)%>%
+  summarize(people = sum(n), 
+         alcohol_users=sum(alcohol_users),
+         marijuana_users=sum(marijuana_users),
+         cocaine_users=sum(cocaine_users),
+         crack_users=sum(crack_users),
+         heroin_users=sum(heroin_users),
+         hallucinogen_users=sum(hallucinogen_users),
+         inhalant_users=sum(inhalant_users),
+         pain_releiver_users=sum(pain_releiver_users),
+         oxycontin_users=sum(oxycontin_users),
+         tranquilizer_users=sum(tranquilizer_users),
+         stimulant_users=sum(stimulant_users),
+         meth_users=sum(meth_users),
+         sedative_users=sum(sedative_users))
+
+use_percentage<-users%>%
+  group_by(generation)%>%
+  summarize(people = people, 
+         "Alcohol Use"=alcohol_users/people,
+         "Marijuana Use"=marijuana_users/people,
+         "Cocaine Use"=cocaine_users/people,
+         "Crack Use"=crack_users/people,
+         "Heroin Use"=heroin_users/people,
+         "Hallucinogen Use"=hallucinogen_users/people,
+         "Inhalant Use"=inhalant_users/people,
+         "Pain Releiver Use"=pain_releiver_users/people,
+         "Oxycontin Use"=oxycontin_users/people,
+         "Tranquilizer Use"=tranquilizer_users/people,
+         "Stimulant Use"=stimulant_users/people,
+         "Meth Use"=meth_users/people,
+         "Sedative Use"=sedative_users/people)
+
+drugs <- read_csv("https://github.com/fivethirtyeight/data/raw/master/drug-use-by-age/drug-use-by-age.csv") %>% 
+  #transform(age = as.numeric(age)) %>%
+  mutate(generation = case_when(age == "12" ~ "Gen Z", age == "13" ~ "Gen Z", age == "14" ~ "Gen Z", age == "15" ~ "Gen Z",
+                                age == "16" ~ "Millenial", age == "17" ~ "Millenial", age == "18" ~ "Millenial", age == "19" ~ "Millenial",
+                                age == "20" ~ "Millenial", age == "21" ~ "Millenial", age == "22-23" ~ "Millenial", 
+                                age == "24-25" ~ "Millenial", age == "26-29" ~ "Millenial", age == "16" ~ "Millenial",
+                                age == "30-34" ~ "Gen X", age == "35-49" ~ "Gen X",
+                                age == "50-64" ~ "Boomer", age == "65+" ~ "Boomer")) %>%
+  rename(alcohol_use = "alcohol-use", alcohol_frequency = "alcohol-frequency",
+         marijuana_use = "marijuana-use", marijuana_frequency = "marijuana-frequency", 
+         cocaine_use = "cocaine-use", cocaine_frequency = "cocaine-frequency", 
+         crack_use = "crack-use", crack_frequency = "crack-frequency", 
+         heroin_use = "heroin-use", heroin_frequency = "heroin-frequency",
+         hallucinogen_use = "hallucinogen-use", hallucinogen_frequency = "hallucinogen-frequency",
+         inhalant_use = "inhalant-use", inhalant_frequency = "inhalant-frequency",
+         pain_releiver_use = "pain-releiver-use", 
+         pain_releiver_frequency = "pain-releiver-frequency",
+         oxycontin_use = "oxycontin-use", oxycontin_frequency = "oxycontin-frequency",tranquilizer_use = "tranquilizer-use", 
+         tranquilizer_frequency = "tranquilizer-frequency",
+         stimulant_use = "stimulant-use", stimulant_frequency = "stimulant-frequency",
+         meth_use = "meth-use", meth_frequency = "meth-frequency", 
+         sedative_use = "sedative-use", sedative_frequency = "sedative-frequency") 
+
+drugs$cocaine_frequency <- as.double(drugs$cocaine_frequency)
+drugs$crack_frequency <- as.double(drugs$crack_frequency)
+drugs$inhalant_frequency <- as.double(drugs$inhalant_frequency)
+drugs$oxycontin_frequency <- as.double(drugs$oxycontin_frequency)
+drugs$meth_frequency <- as.double(drugs$meth_frequency)
+drugs$heroin_frequency <- as.double(drugs$heroin_frequency)
+
+drugs[is.na(drugs)] = 0
+
+
+drugss = drugs %>%
+  group_by(generation) %>%
+  summarise(pop = sum(n), alc_use = sum(alcohol_use * n, na.rm = TRUE) / pop, 
+            #alc_freq = sum(alcohol_frequency), 
+            marijuana_use = sum(marijuana_use * n, na.rm = TRUE) / pop, 
+            #marijuana_freq = sum(marijuana_frequency), 
+            cocaine_use = sum(cocaine_use * n, na.rm = TRUE) / pop, 
+            #cocaine_freq = sum(cocaine_frequency), 
+            crack_use = sum(crack_use * n, na.rm = TRUE) / pop, 
+            #crack_freq = sum(crack_frequency), 
+            heroin_use = sum(heroin_use * n, na.rm = TRUE) / pop,
+            #heroin_freq = sum(heroin_frequency), 
+            hallucinogen_use = sum(hallucinogen_use * n, na.rm = TRUE) / pop, 
+            #hallucinogen_freq = sum(hallucinogen_frequency), 
+            inhalant_use = sum(inhalant_use * n, na.rm = TRUE) / pop, 
+            #inhalant_freq = sum(inhalant_frequency), 
+            pain_releiver_use = sum(pain_releiver_use * n, na.rm = TRUE) / pop, 
+            #pain_releiver_freq = sum(pain_releiver_frequency),
+            oxycontin_use = sum(oxycontin_use * n, na.rm = TRUE) / pop, 
+            #oxycontin_freq = sum(oxycontin_frequency), 
+            tranquilizer_use = sum(tranquilizer_use * n, na.rm = TRUE) / pop, 
+            #tranquilizer_freq = sum(tranquilizer_frequency),
+            stimulant_use = sum(stimulant_use * n, na.rm = TRUE) / pop, 
+            #stimulant_freq = sum(stimulant_frequency), 
+            meth_use = sum(meth_use * n, na.rm = TRUE) / pop,
+            #meth_freq = sum(meth_frequency), 
+            sedative_use = sum(sedative_use * n, na.rm = TRUE) / pop)
+            #sedative_freq = sum(sedative_frequency))
+
+head(drugss)
+pie_drugs <- drugss %>% 
+  select(!generation) %>%   
+  select(!pop) %>%
+  summarize(Alcohol = sum(alc_use),
+            Marijuana = sum(marijuana_use), 
+            Cocaine = sum(cocaine_use), 
+            Crack = sum(crack_use), 
+            Heroin = sum(heroin_use), 
+            Hallucinogen = sum(hallucinogen_use), 
+            Inhalant = sum(inhalant_use), 
+            Pain_Reliever = sum(pain_releiver_use),
+            Oxycontin = sum(oxycontin_use), 
+            Tranquilizer = sum(tranquilizer_use),
+            Stimulant = sum(stimulant_use), 
+            Meth = sum(meth_use), 
+            Sedative = sum(sedative_use))
+
+pie_drugs = pie_drugs[, order(colSums(-pie_drugs))]
+```
+
+```{r, include=FALSE}
+pie_char_data = tibble(Drug = c("Alcohol", "Marijuana", "Pain Reliever", "Tranquilizer", "Hallucinogen", "Cocaine", "Stimulant", "Inhalant", "Oxycontin", "Crack", "Meth", "Sedative", "Heroin"),                      Cumulative_Generation_Percentage = c(pie_drugs$Alcohol, pie_drugs$Marijuana, pie_drugs$Pain_Reliever, pie_drugs$Tranquilizer, pie_drugs$Hallucinogen, pie_drugs$Cocaine, pie_drugs$Stimulant, pie_drugs$Inhalant, pie_drugs$Oxycontin, pie_drugs$Crack, pie_drugs$Meth, pie_drugs$Sedative, pie_drugs$Heroin))
+
+###SUMMING THE DATA TO FIND MOST POPULAR DRUGS
+popular_drugs <- drugss %>%
+  select(!generation) %>% 
+  select(!pop)
+
+popular_drugs <- popular_drugs[, order(colSums(-popular_drugs))]
+popular_drugs <- popular_drugs[,1:4]
+
+head(popular_drugs)
+
+###TAKING DRUGS AND TURNING IT INTO MOST POP DRUG FREQUENCIES  
+pop_drug_freq <- drugss %>%
+  group_by(generation) %>%
+  select(alc_use, marijuana_use, pain_releiver_use, tranquilizer_use)
+
+pop_drug_use_2 <- drugss %>%
+  group_by(generation) %>%
+  select(alc_use, marijuana_use, pain_releiver_use, tranquilizer_use) %>%
+  rename(Alcohol = "alc_use", Marijuana = "marijuana_use", "Pain Reliever" = "pain_releiver_use", 
+         Tranquilizer = "tranquilizer_use") %>%
+  pivot_longer(!generation, names_to = "drug", values_to = "use") 
+
+pivot<- use_percentage%>%
+  pivot_longer(cols = ends_with("Use"), names_to="drug", values_to="percentage")%>%
+  mutate(percentage = round(100*percentage, digits=2))
+
+```
+
+
+### ***Introduction***       
+
+The use of psychoactive substances is not new in human history. Archaeological evidence tells us that shamans had begun using medicinal plants in the Paleolithic Age, approximately 60,000 years ago^[https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4020364/] and by the 17th century, modern-day concepts of addiction were being observed^[https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3202501/]. In this report, we will further analyze drug use by examining different generations in the United States. We are interested in learning more about the fluctuation if any, of drug habits across generations in the United States.
+
+In this report, we will address three main questions:         
+                
+1. Is drug use more prominent among younger or older generations?                     
+2. What drugs are used most prominently across each generation?                        
+3. How does the drug use percentage  of the most popular drug(s) compare across each generation?                      
+
+
+We believe that drug usage will be higher among younger generations than their older counterparts. Among younger generations (Gen Z and Millennials) the frequency of use will be higher than that of the older generations (Gen X and Boomers). Lastly, we believe that “harder” drugs will be more prevalent amongst younger generations, marijuana and alcohol use will be more widespread among older generations.
+
+### ***Background***
+
+#### **About the Data**
+
+The data used in this report^[https://github.com/fivethirtyeight/data/blob/master/drug-use-by-age/drug-use-by-age.csv] is taken from the Substance Abuse and Mental Health Data Archive and comes from the 2012 National Survey on Drug Use and Health^[https://www.samhsa.gov/data/sites/default/files/NSDUH2012MRB/NSDUH2012MRB/2k12Q.pdf]. The NSDUH is conducted every year in all 50 states & D.C. by the Substance Abuse and Mental Health Services Administration and the U.S. Department of Health and Human Services and sent to around 70,000 people. In this report, all data used comes directly from a data-set modified by fivethirtyeight.com^[https://fivethirtyeight.com] in favor of the original data. The modified data set breaks down the answers collected by the NSDUH to 27 variables. These variables include 13 `drug-use` variables (e.g. `cocaine-use`), 13 `drug-frequency` variables (e.g. `heroin-frequency`), an `age` variable, and `n` referring to the number of people.                    
+  There are 13 drugs presented in our data, 17 age groups, and the corresponding number of users in each age group. Each drug is evaluated into two sub-categories: use and frequency. Each drug use variable, such as `alcohol-use`, represents the percentage of those in an age group who used that particular drug within the past 12 months. Each drug frequency variable, such as `alcohol-frequency`, represents the median number of times a user in an age group used alcohol within the past 12 months. For some drugs in some age groups, surveyors found very few people used this drug, so the data for the median number of the use frequency for this drug is missing.
+  
+In order to efficiently display all drugs analyzed in this report as well as provide background information of popularity, we have created the graph below. To obtain this graph, we found the total number of users per drug by multiplying `drug-use` * `number of people` in a certain age group. Then, we calculated the `total population` and `percentage of use` in the population. This was done to display how popular each drug is overall, and to display all the drugs discussed in our report. In addition to providing background, this graph will help aid the justification of our hypotheses.    
+
+```{r, echo = FALSE}
+legend_ord <- levels(with(pie_char_data, reorder(Drug, -Cumulative_Generation_Percentage)))
+
+ggplot(pie_char_data, aes(x = Drug, y = Cumulative_Generation_Percentage, fill = Drug)) +
+  geom_col() +
+  theme_classic() +
+  scale_x_discrete(limits = c("Alcohol", "Marijuana", "Pain Reliever", "Tranquilizer", "Hallucinogen", "Cocaine", "Stimulant", "Inhalant", "Oxycontin", "Crack", "Meth", "Sedative", "Heroin")) +
+  theme(axis.text=element_blank(), 
+        axis.ticks = element_blank())+
+  labs(title="Drug Prominence", subtitle = "Across All Generations", x="Drug", y="Cumulative Drug User Percentage")+
+geom_text(aes(label=round(Cumulative_Generation_Percentage, 2)), size=2.5, nudge_y = 5, color = "black") +
+  scale_fill_discrete(breaks=legend_ord)
+  
+
+```
+
+
+`Defining terms in context:`                   
+  In this report, we consider "drugs" or "drug" to refer to most, but not all, substances classified under the Controlled Substance Act^[https://www.dea.gov/drug-scheduling]. A notable exception is made for alcohol, which is not a controlled substance, but a regulated one under the Federal Uniform Drinking Age Act of 1984 and 21st Amendment^[https://www.niaaa.nih.gov/alcohols-effects-health/alcohol-policy]. Given its popularity, we believe it important to consider in our analysis. 
+ 
+The following groups of drugs are clarified by the 2012 National Survey on Drug Use^[https://www.samhsa.gov/data/sites/default/files/NSDUH2012MRB/NSDUH2012MRB/2k12Q.pdf]:              
+
+1. Hallucinogen
+    + LSD, also called ‘acid’         
+    + PCP, also called ‘angel dust’ or phencyclidine Peyote             
+    + Mescaline    
+    + Psilocybin       
+    + ‘Ecstasy’ or ‘Molly’, also called MDMA                                          
+               
+2. Inhalant
+    + Amyl nitrite, ‘poppers,’ locker room odorizers, or ‘rush’
+    + Correction fluid, degreaser, or cleaning fluid
+    + Gasoline or lighter fluid
+    + Glue, shoe polish, or toluene    
+    + Halothane, ether, or other anesthetics
+    + Lacquer thinner, or other paint solvents
+    + Lighter gases
+    + Nitrous oxide or ‘whippits'
+    + Spray paints
+    + Aerosol sprays
+                    
+3. Pain Reliever 
+(any form of prescription pain relievers that were not prescribed for the subject or that were taken only for the experience or feeling they caused)
+    + Codeine
+    + Percocet, Percodan, or Tylox
+    + Vicodin, Lortab, or Lorcet 
+    + Demerol 
+    + Dilaudid 
+    + Fioricet 
+    + Fiorinal
+    + Hydrocodone
+    + Methadone
+    + Morphine
+    + OxyContin
+    + Phenaphen with Codeine 
+    + Propoxyphene
+    + SK-65 
+    + Stadol
+    + Talacen
+    + Talwin / Talwin NX 
+    + Tramadol
+    + Ultram
+                              
+4. Sedative
+    + Methaqualone, Sopor, or Quaalude
+    + Nembutal, Pentobarbital, Seconal, Secobarbital, or
+Butalbital
+    + Restoril or Temazepam 
+    + Amytal 
+    + Butisol 
+    + Chloral Hydrate 
+    + Dalmane
+    + Halcion
+    + Phenobarbital
+    + Placidyl
+    + Tuinal
+
+5. Stimulant 
+    + Codeine
+    + Percocet, Percodan, or Tylox
+    + Vicodin, Lortab, or Lorcet 
+    + Demerol 
+    + Dilaudid 
+    + Fioricet 
+    + Fiorinal
+    + Hydrocodone
+    + Methadone
+    + Morphine
+    + OxyContin
+    + Phenaphen with Codeine 
+    + Propoxyphene
+    + SK-65 
+    + Stadol
+    + Talacen
+    + Talwin / Talwin NX 
+    + Tramadol
+    + Ultram
+    
+6. Tranquilizer 
+    + Klonopin or Clonazepam
+    + Xanax, Alprazolam, Ativan, or Lorazepam
+    + Valium or Diazepam
+    + Atarax 
+    + BuSpar 
+    + Equanil 
+    + Flexeril
+    + Librium
+    + Limbitrol
+    + Meprobamate
+    + Miltown
+    + Rohypnol
+    + Serax
+    + Soma
+    + Tranxene
+    + Vistaril
+    
+When this report mentions any of the 6 above subgroups, we are referring to all drugs referenced by the NSDUH that fall under the overarching label. All other drugs mentioned in our report are as is and do not have subgroups.                
+
+When we refer to "hard" drugs, we refer to all drugs classified under the Controlled Substance Act except for marijuana. Only six of fifty states consider marijuana to be fully illegal at a state level^[https://disa.com/map-of-marijuana-legality-by-state]. Even within those six states, marijuana is decriminalized to some capacity within some municipalities and cities. Given the widespread use of marijuana and relaxation of marijuana-related laws, this report going forward will exclude marijuana and alcohol as a "hard drug".                            
+
+`Clarifying data manipulation in context:`                                   
+In order to analyze drug use through a generational lens, we have divided the age groups in the data into four generations. When we refer to different generations, Gen Z, Millennial, Gen X, and Boomer, we are referring to their corresponding age group within the data. ^[https://www.pewresearch.org/fact-tank/2019/01/17/where-millennials-end-and-generation-z-begins/].        
+  
+  1. Gen Z: 12-15     
+  2. Millennial: 16-29      
+  3. Gen X: 30-49        
+  4. Boomer: 50-65+       
+
+After reviewing multiple sources, we made the decision that it was justified to modify some generational cut-off ages. Given that generations aren't cut in stone and blur together at the cusps, we do not believe this decision will affect the results heavily.                                                             
+
+When we refer to "younger" and "older" generations, we mean younger to encompass Gen Z and Millennial generations and older to encompass Gen X and Boomer generations. This is because we wanted to analyze differences between drug use of a parent-grandparent generation and drug usage of college/high-school aged kids. In order to stick to our generational lens, we decided to split the younger 2 generations and the older 2 generations to display and discuss our data.                 
+
+In order to manipulate and analyze the data further, we had to change the `frequency-use` variable class from a string to make them doubles. The `drug-use` variable class was already given as a double.                                               
+
+
+#### **Thesis Justification**                
+
+The purpose of this report is to address 3 questions:                       
+1. Is drug use more prominent among younger or older generations?             
+2. How does the drug use percentage of the most popular drugs compare across each generation?                           
+3. What drugs are used most prominently across each generation?                   
+
+We believe that analyzing the differences between younger and older generations will let us subsequently analyze the different lifestyles of subjects. The oldest of the younger generation is only 29, meaning that they have recently graduated, may still be in school, or just entering the workforce. The youngest of the younger generation is only 12 and we expect them to be beginning middle school. The younger generations are more likely to be victims of risk factors such as low grades or failure in school, permissive parenting, low self esteem, parent or older sibling drug/alcohol use, etc.,^[https://www.getsmartaboutdrugs.gov/family/why-do-teens-use-drugs]. These risk factors pose a unique threat to developing minds and we expect drug usage to be significantly higher as a result.                
+
+Because of the risk factors and reasons stated above, we believe the drug use percentage of the most popular drugs will also be higher for younger generations than older.                 
+
+Because of the prevalence of alcohol and marijuana in pop culture and the minimal social stigma surrounding these substances, we believe that they will be used significantly across generations. However, because we expect Millennial and Gen Z to be in more social settings where drugs are present, we expect them to do more "hard drugs" than Boomers or Gen X. 
+
+
+#### **Final Notes & Unusual Factors**
+
+The respondents to the survey may have reported the use of more than one drug. This means that some percentages will be greater than 100% in some of the data displayed.        
+
+  Additionally, use of one drug may affect the usage of another. For example, someone who may have drank alcohol could have also wanted to take painkillers but couldn't given the dangers of mixing the two substances. Therefore, our findings do not fully reflect the attitudes or full potential of drug usage of each generation. 
+  
+  The data we are presenting is collected from 2012. This may affect our interpretation in context of societal norms and other factors that may have evolved in the last 8 years. Additionally, the data was obtained through an anonymous government survey, so there is possibility of multiple types of bias including, but not limited to, nonresponse bias, response bias, and desirability bias^[https://www.ncbi.nlm.nih.gov/books/NBK519797/]. Response bias is the tendency of a person to answer questions misleadingly. In this survey, the social desirability of the respondent could factor into their response. People want to portray themselves favorably, making them reluctant to admit to an answer they may consider disagreeable. Because the topic concerned is socially taboo, respondents may change their answer to one they perceive is more socially desirable.           
+
+  In this report, we will break down the generational use of various drugs, focusing on factors like the percentage of use, and the types of substances. Through numerical and graphical summaries we will analyze and discuss the relationships and/or correlation between generations and drug use. 
+  
+### ***Analysis***                    
+
+**Drug Use Prominence by Generation**
+
+To answer the question of whether older or younger generations use drugs more prominently, in the following graph we will look at the relationship between drug use percentage per each drug in the data set for each generation. We plan to take the drug use percentage for each age group times the age group population to calculate the use time for each drug of each age group. Then, we will divide those age groups into younger (Gen Z and Millennials (12 - 29) ) and older (Gen X and Boomer (above 30) ) generations, adding up the using time and dividing by the generation population to get the drug-using percentage for each generation.               
+
+```{r, echo = FALSE, fig.width= 13.5}
+generations %>%
+  ggplot(aes(x=generation, y=percentage, fill=generation, label=percentage))+
+  geom_col(position="dodge")+
+  coord_flip()+
+  scale_x_discrete(limits = c("younger", "older"))+
+  facet_wrap(~drug, nrow=3)+
+  labs(title="Percentage of Substance Users per Generation",
+       x="Generation", 
+       y="Percent of Population that Uses", 
+       subtitle = "Younger: Gen Z, Millenials | Older: Gen X, Baby Boomers",
+       aes(size=100))+
+geom_text(aes(label=round(percentage, 1)), size=2.5, nudge_y = 4, color = "black", hjust=0.5)+
+  theme_bw()+ 
+  theme(axis.text.x=element_blank(), 
+        axis.ticks = element_blank())
+
+```
+                      
+The older generations (Boomers and Gen X) percentage of substance users is higher than younger generations’ percentage of substance users for alcohol, but lower than the younger generation for all other drugs.               
+
+
+**User Percentage of the Most Popular Drugs by Generation**
+
+In the following graph we will study the relationship between drug use percentage across all drugs in the dataset. Using these variables we will deduce which drugs are most popular for each generation. To determine which drugs are used most prominently across each generation, we need to compare drug use between generations. In order to show drug use across generations, we decided to summarize the drug use data across each generation by pivoting and calculating usage percentages for each generational population. By faceting by drug type, we can compare the use of each drug individually across generations. This shows distinct usage comparisons between generations in addition to between each individual drug. Labels were added to the bars to accurately show the data for more precise comparison.                    
+          
+```{r, echo = FALSE, fig.width= 12}
+var_order <- pivot %>%
+  group_by(drug) %>%
+  summarize(m=mean(percentage)) %>%
+  arrange(desc(m)) %>%
+  pull(drug) %>%
+  unique()
+pivot <- pivot %>%
+  mutate(drug = fct_relevel(drug, as.character(var_order)))
+
+ggplot(pivot, aes(x=generation, y=percentage, fill=generation, label=percentage))+
+  geom_col(position="dodge")+
+  scale_x_discrete(limits = c("Gen X", "Millenial", "Boomer", "Gen Z"))+
+  facet_wrap(~drug, nrow=3)+
+  coord_flip()+
+  scale_fill_discrete(name = "Generation")+
+
+  theme_bw()+  
+  theme(axis.text.x=element_blank(), 
+        axis.ticks = element_blank())+
+  labs(title="Percentage of Substance Users per Generation", x="Generation", y="Percent of Population that Uses")+
+  
+geom_text(aes(label=round(percentage, 1)), size=2.5, nudge_y = 5, color = "black")
+
+```
+Boomers most prominently use alcohol, while Gen X’s most prominently use alcohol and marijuana. Millennials mostly use alcohol, marijuana, and pain relievers, and Gen Z’s mostly use alcohol and marijuana.   
+
+
+**Taking a Look at the Most Popular Drugs**               
+              
+We originally hypothesized that the younger generations (Gen Z and Millenials) would have higher use percentages than that of the older generations (Gen X and Boomers). In the following graph we will observe the relationship between drug use percentage across the four most prominently used drugs and each generation. In order to produce a graph to test this theory, we will manipulate the data by grouping each age group under the designated generations defined earlier. In order to show the use percentages for each drug per generation, we will use the overall sum of the drug use percentage multiplied by the population per generation and divide that value by the overall population. We will then order the drugs based on the numerical value per drug use percentage, giving us the four most prominently used drugs. Using these selected drugs and the manipulated data, we can graph each generation’s various drug use percentages next to each other.                   
+              
+```{r, echo = FALSE}
+ggplot(pop_drug_use_2, mapping = aes(x = drug, y = use, fill = generation)) +
+         geom_col(position = "dodge2") +
+         ylab("Use Percentage") +
+         xlab("Drug") +
+         ggtitle("Drugs vs. Use Percentage", subtitle = "Per Generation") +
+         theme(axis.text.x = element_text(color = "black", angle = 0)) +
+         scale_fill_discrete(name = "Generation")+
+  theme_bw()+      
+  theme(axis.ticks = element_blank())+
+
+         geom_text(aes(label=round(use, 2)), position=position_dodge(width=0.9), 
+                   vjust=-0.25, size = 2.5, color = "black")
+```
+              
+In the graph above we can see that Millenials and Gen X take the lead of drug use percentage across all prominently used drugs.                              
+
+### ***Discussion***
+
+Looking at the first set of graphs, we can start to analyze differences in drug usage between younger and older generations. Alcohol consumption between both younger and older generations is really high (over 50% on average), but the elder generation uses it more prominently. This is probably due to accessibility. All of the older generations have legal access to alcohol whereas much of the younger generation is under 21. The second most frequently used drug is marijuana and younger generations use it more prominently at twice the rate of the elder generations. For drugs such as cocaine, hallucinogens, heroin, inhalants, oxycontin, meth, pain-relievers, sedatives, stimulants, and tranquilizers, both younger and the elder generations do not have a substantial use rate, but the younger generations tend to use them more. This is expected as younger generations are likely to go out more and be in social settings where harder drugs are present. One exception is crack, where both younger and the elder generations do not use it with notably high percentages, but the older generations’ use is higher. Although we expected younger generation drug use to be significantly higher, our graphical analysis tells us otherwise. Ultimately, it’s hard to say whether overall drug use is more prominent within older or younger generations, but with the exception of crack and alcohol, younger generations have the tiniest sliver of more use, with the exceptions being alcohol and crack. It is noted, however, that in the case of the most prominently used substance, alcohol, older generations drink almost 20% more than younger generations. In the future, it would be interesting to analyze why crack is used more amongst older generations as well as how generational use in 2012 compares to use in 2020.                        
+
+In the second set of graphs, we take a look at which drugs are popular for each generation. We inferred that harder drugs (not alcohol or marijuana) would be more prominent among the younger Gen Z and Millennial generations while alcohol and marijuana will be more prevalent among the older Boomer and Gen X generations. This turned out to be partially correct. The data shows that harder drugs are typically used more by the younger generations with the exception of Crack use. Alcohol is by far the most used drug with all generations. Marijuana, however, is not more popular among the older generations overall. Millennials are the most prominent Marijuana users, followed by Gen X, showing that the middle two generations use the most. Moving forward, we would like to further analyze generational drug use and see if certain drugs were more popular when Baby Boomers were in their teens compared to when Millennials are in their teens. To do this, we would need to obtain data that captures drug use across a generations lifetime, not just data that discusses all generations across a single year.                                
+
+In the third graph, we begin to analyze the most popular drugs and their use among each generation. We can see that Millennials have the highest drug use variability compared to the other generations, yet not the highest overall use percentage. Gen X’s use percentage is the highest for alcohol, and Gen Z seems to fall behind in three of the four drugs. This is interesting as we expected Millennials’ and Gen Z’s usages to be the highest. However, given the age of the data, a lower percentage should be expected as Gen Z was 12-15 in 2012. Millennial drug use is extensive compared to the other generations (for marijuana, pain reliever, and tranquilizers), with 4-8 times the use percentages of other generations. Given the age range (16-29) of Millenials, though, this is to be expected as it encompasses late-teen to late-college years, which is colloquially known as a time of partying, newfound freedom, etc., which would lead to higher drug use. Overall, our theory was incorrect since we predicted Millenials and Gen Z to have the highest use percentages amongst all generations. Further analysis of this could include whether or not Gen Z uses drugs at the same percentage that Millenials did when they were the same age. If we could have new data encompass drug use across a generations lifetime, it would help us better analyze generational drug use across time, rather than across a single year.                    
+
+
+This report established three questions:                         
+          
+1. Is drug use more prominent among younger or older generations?                     
+2. What drugs are used most prominently across each generation?                        
+3. How does the drug use percentage  of the most popular drug(s) compare across each generation?                      
+
+Through numerical and graphical analysis, we have come to these conclusions:                              
+          
+1. Drug use is fairly consistent among older and younger generations, with some small discrepancies in who uses more frequently. The most used drug, alcohol, is consumed by older generations 40% more compared to younger generations. The second most used drug, marijuana, is consumed by younger generations 13% more compared to older generations. Overall, the original hypothesis is disproven since older generations do use drugs, specifically alcohol, at a higher rate.                
+    
+2. Alcohol and marijuana remained the most popular drug across all four generations. Gen X had the highest alcohol use and Millenials had the highest marijuana use. Alcohol use rates were high for each generation compared to all other drugs but was significantly lower for Gen Z. Marijuana was typically used more frequently by Millenials and Gen X, but was not very popular with Gen Z or Boomers. This data ultimately disproves the original hypothesis.             
+          
+3. Use percentage of the four most popular drugs, alcohol,  marijuana, pain relievers and tranquilizers, varied across generations. We originally hypothesized that the younger generations (Gen Z and Millenials) would have higher use percentages than that of the older generations (Gen X and Boomers). However, Millennial drug use was only higher for three out of the four drugs. Overall, drug use variability across generations was highest among Millenials, with Gen X in second place, and Gen Z & Boomers following at slightly lower rates. Millennials and Gen Z do not take the lead on overall drug use percentage, ultimately disproving the original hypothesis.                  
+          
+
+##### **Shortcomings**  
+
+Something to note about this set of data, is that in 2012 the Gen Z population was under the age of 21, making it difficult to access drugs and might have made them scared to truthfully record the extent of their drug use. Beyond Gen Z, drug use is a sensitive topic for many, so these results overall might be inaccurate due to desirability bias.                     
+
+The true extent and desirability of drug use is unknown. The youngest Millennials were 16, making it harder to gauge their true use of drugs like alcohol or marijuana where you need to be legal to access it. If we collected data in 2020, it’s likely that alcohol and marijuana use would be significantly higher for Millennial and Gen Z populations that have come of age in the last 8 years. Similarly, subjects who use out of necessity or addiction may not desire use. It’s more than likely that these numbers include participants who wanted to use drugs but couldn’t, as well as participants who use drugs, but don’t want to. It’s important to note the difference between usage and desirability and how that impacts our analysis of attitudes and popularity of drug use.                       
+
+
+#### **Additional Insight** 
+Drug use is a complex and stigmatized practice. There are many factors that contribute to drug use and drug addiction that would be extremely useful to build upon the findings of this report. In the background section, we discussed risk factors for younger generations that we hypothesized attributes to rates of higher drug use. In the future, we would like to analyze how outside risk factors such as poverty, familial history of addiction, mental illness, etc., affect drug usage.  
+
+
+
+
+

@@ -1,0 +1,120 @@
+---
+output: html_document
+geometry: margin=0.75in
+fontsize: 12pt
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      cache = FALSE)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+source("../scripts/viridis.R")
+```
+
+
+# Spring 2021 STAT 240 Midterm Exam - Part 4
+
+This midterm exam has Four Parts - all parts must be completed and submitted by 11:59 PM CT (local Madison, WI time) on Friday, March 12.  Once started, an Exam Part must be completed and submitted on Canvas within 60 minutes.  
+
+- You will need to agree to an honor code statement in each exam part in order to receive credit.
+- You are not allowed to communicate with anyone using any means (email, phone, text, social media, online discussion platforms, etc.) except the instructors of this course. You are allowed to use materials from the course and the internet. 
+- If you have questions during the exam, post your questions on a private post on Piazza. To do this, select the "Individual Student(s) / Instructor(s)" option next to "Post to:" when creating your post.
+- You can expect for questions to be addressed during normal working hours in Madison, WI (9 AM CT - 5 PM CT) on Friday, March 12.  Questions posted outside that window may still be addressed.
+
+
+
+## Part 4:  Exoplanet Data
+
+Data for this part are contained in files called "exoplanets-midterm.csv". Note:  this is a subset of the exoplanet data we have used earlier in the semester.
+
+Recall that exoplanets are planets orbiting stars outside our Solar System.  The data were pulled from the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/index.html) on September 3, 2020.  The variables  are defined below.  If you want more details, please see the exoplanet archive [data column definitions](https://exoplanetarchive.ipac.caltech.edu/docs/API_PS_columns.html) .
+
+`planet` = Planet Name  
+`method` =  Method by which the planet was first identified  
+`year` = Discovery Year (the year it was discovered)  
+`number` = Number of planets orbiting the same host star as `planet`   
+`radius` = Planet Radius (units: Earth Radius)  
+`mass` = Approximate or Minimum Planet Mass (units: Earth Mass)  
+`facility` = Name of facility of planet discovery observation  
+
+
+## Questions
+
+Load the "exoplanets-midterm.csv" data file and name the data frame `planets`, and then respond to the questions below.
+```{r}
+planets<- read.csv("../data/exoplanets-midterm.csv")
+```
+#### Question 4.1 (5 points)  
+
+Create a table that displays the facility name and the number of exoplanets discovered by method subject to the following modifications.  
+
+- Only consider facilities that have discovered *at least* 60 exoplanets  
+- Only consider exoplanets that were discovered using the following methods:  "Radial Velocity", "Transit", or "Microlensing"  
+- Set-up your table so that there is a column for facility, and a column for each of the three discovery methods noted above (i.e., there will be 4 columns total)  
+-  In the three columns corresponding to the methods, the values should be the number of exoplanets discovered.  For example, the first row of the table will have the name of the facility, then the number of exoplanets discovered by that facility using (i) the "Radial Velocity" method, (ii) the "Transit" method, and (iii) the "Microlensing" method  
+-  Replace any missing values in the table with a 0  
+- Arrange the rows in alphabetical order by `facility`  
+- Print out the all the rows and the 4 columns of this table  
+
+*Be sure that your HTML includes all the rows and the 4 columns of the table; you will not receive full credit if the full table is not printed.*
+
+```{r}
+good_facility = planets %>% 
+  count(facility) %>%  
+  filter(n>=60) %>% 
+  select(facility) %>% 
+  pull()
+
+planets %>% 
+  filter(facility%in% good_facility) %>% 
+  filter(method %in% c("Radial Velocity", "Transit","Microlensing" )) %>% 
+  count(facility,method) %>% 
+  pivot_wider(
+    id_cols = facility,
+    names_from = "method",
+    values_from = "n",
+    values_fill = 0,
+    values_fn = sum
+  ) %>% 
+  arrange(facility)
+```
+
+#### Question 4.2 (5 points) 
+
+Make a graphic that satisfies the following:
+
+-  Make a bar graph of the facility variable that displays the *proportion* of the number of exoplanets discovered by each facility given that the facility has discovered at least 60 exoplanets (i.e., the same subset of facilities as used in Question 4.1)   
+-  Adjust the orientation of the x-axis text so the tick mark labels do not overlap  
+- Add descriptive axis labels and a meaningful title
+
+```{r}
+planets %>% 
+  filter(facility %in% good_facility) %>% 
+  group_by(facility) %>% 
+  summarise_at("number",sum) %>% 
+  ggplot(aes(x=facility))+
+  geom_col(aes(y= (number)/sum(number)))+
+  theme(axis.text.x = element_text(angle=45,hjust =1))+
+  xlab("Facility")+
+  ylab("Exoplanet Proportion")+
+  ggtitle("Distribution of number of exoplanet discovered by facilities")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

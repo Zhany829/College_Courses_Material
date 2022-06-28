@@ -1,0 +1,614 @@
+---
+title: "Models for the Human Sex Ratio"
+output: html_document
+---
+
+\newcommand{\given}{\,\mid\,}
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+\renewcommand{\prob}{\mathsf{P}}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=FALSE,message=FALSE)
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+source("../../scripts/beta-binomial.R")
+```
+
+## Background
+
+- Over the next several lectures,
+we will explore a collection of data sets on the composition of boys and girls in families.
+
+> Human gender identity is a complex issue. The `sex` variable identified as boy or girl in these data sets refer to the sex that is recorded at birth according to the appearance of genitalia.
+This sex measurement might not agree with the gender (binary or not) that an individual identifies with later in life.
+
+- There are multiple theories about factors that might affect sex determination in humans.
+- In many human populations, the observed relative frequency of male birth is slightly higher than 50 percent, and it is seen to fluctuate over time.
+- A question we will investigate is:
+
+> do all live births have the same probability of being male, or are some couples more likely than others to produce male (or female) children?
+
+- There are very rare cases where an individual is born with both male and female genitalia and and also rare cases where an individual may have neither,
+or that the development of genitalia may occur later in life than is normal.
+- Less rare, but uncommon are instances of multiple births (twins, triplets, and so on).
+- In the data sets we will consider, such cases have been excluded.
+
+## Data
+
+- The first data set is a subset from a massive data collection made by Geissler and published in 1889
+from church birth records in Saxony (in modern times a region in eastern Germany)
+during 1876--1885.
+- During this time, each birth certificate was required to contain all of the children in the family.
+- As a consequence,
+many families will appear multiple times in the data set if they had multiple children during this period,
+and many births are recorded multiple times (when they happened, and when younger siblings were born).
+- However, all records from a given family size will correspond to separate families.
+- The data we have for each family size actually shows results of the sexes among the first $k-1$ kids at the time of the birth of the $k$th kid.
+- The reason for this weird choice is to lessen the presumed bias due to the decision to stop having more children based on the sex of the last child.
+- This, however,
+ignores that same decision being made at the birth of the previous child.
+- But it is the data that we have.
+
+```{r read-geissler-data}
+geissler = read_csv("../../data/geissler.csv")
+
+head(geissler)
+```
+
+- `boys` is the number of boys in the family
+- `girls` is the number of girls in the family
+- `size` equals `boys` plus `girls` and is the number of children in the family
+- `freq` is the number of families with a birth certificate with this number of boys and girls who are older siblings to the child who was born.
+
+## Initial Statistical Model
+
+- We will begin by assuming a binomial model for $X$,
+the number of boys among the the first $n$ children
+in a Saxon family from this time period which has $n+1$ or more children.
+- Let $p$ represent this probability.
+
+$$
+X \given p \sim \text{Binomial}(n,p)
+$$
+
+- We will examine such a model a family size 8 in the data set, but the sae analysis can be repeated for other family sizes.
+- I recommend doing a similar analysis for a different family size.
+
+## Analysis
+
+```{r geissler-analysis}
+### 1 Create a subset of the data including only families of a given size
+
+g8 = geissler %>%
+  filter(size==8)
+
+### 2 Calculate the observed proportions of the number of families with each possible number of boys and girls. Add these proportions as a column to your data.
+
+g8 = g8 %>%
+  mutate(prop = freq/sum(freq))
+
+### 3 Determine the total number of boys, the total number of girls, and the total number of children in your families. Estimate `p` by the ratio of the total number of boys out of the total number of children.
+
+g8_sum = g8 %>%
+  summarize(
+    boys = sum(boys*freq),
+    girls = sum(girls*freq),
+    total = sum(size*freq),
+    p_boy = boys/total,
+    p_girl = girls/total
+  )
+
+g8_sum
+
+### 4 For this family size, assume the binomial distribution for the number of boys in a family of that size. Calculate the binomial probabilities of each possible outcome and add these values as a new column in your data frame.
+
+p_8 = g8_sum$p_boy
+
+p_8
+
+g8 = g8 %>%
+  mutate(p_binom = dbinom(0:8,8,p_8))
+
+g8
+
+### 5 Graph the binomial distribution (use `gbinom()`)
+
+### 6 Add to this plot a graph of the observed frequencies with a line plot (geom_lines()). How do the observed frequencies compare to the binomial probabilities?
+
+shift = 0.15
+gbinom(8,round(p_8,4)) +
+  geom_point(aes(x=boys,y=p_binom), data=g8, color="blue",shape=16) +
+  geom_point(aes(x=boys+shift,y=prop), data=g8, color="red",shape=16) +
+  geom_segment(aes(x = boys + shift, y = prop,
+                   xend = boys + shift, yend = 0),
+               data = g8, color = "red") +
+  ggtitle("Binomial(8, 0.5156)",
+          subtitle = "Blue = binomial, red = observed")
+
+```
+
+### Observations
+
+- The observed proportions are slightly lower in the middle and higher in the tails than the binomial distribution.
+- The true distribution is *overdispersed* relative to the binomial distribution.
+
+```{r}
+## Binomial variance
+sigma2_binom = 8 * p_8 * (1-p_8)
+sigma2_empirical = g8 %>%
+  summarize(mu = sum(boys*freq)/sum(freq),
+            sigma2 = sum( (boys - mu)^2 * freq ) / sum(freq) ) %>% 
+  pull(sigma2)
+
+## variances
+sigma2_binom
+sigma2_empirical
+
+## standard deviations
+sqrt(sigma2_binom)
+sqrt(sigma2_empirical)
+```
+
+### Assumptions
+
+The binomial model makes four key assumptions. What are they? (Recall BINS).
+
+1. Binary outcomes for each trial (boy or girl)
+2. Independence (genders of early trials do not affect subsequent ones)
+3. Fixed sample size (families decide how many kids to hve before seeing genders of the earlier born kids)
+4. Same probability (same probability of a boy for each child)
+
+List potential realities that could violate these assumptions in the family composition data.
+
+1. Maybe trials are not independent within families?
+2. Could the chance of having a boy increase with the mother or father's age?
+3. Could different families have different chances of having male or female children?
+4. Might families decisions to have more children be affected the number of children they already and how many are boys and girls?
+
+## Calculate and Plot Proportion of Boys
+
+```{r}
+g_sum = geissler %>% 
+  group_by(size) %>% 
+  summarize(families = sum(freq),
+            boys = sum(boys*freq),
+            girls = sum(girls*freq),
+            children = boys + girls,
+            p_boy = boys/ children,
+            p_girl = girls / children)
+
+g_sum
+
+shift = 0.15
+gbinom(8,round(p_8,4)) +
+  geom_point(aes(x=boys,y=p_binom), data=g8, color="blue",shape=16) +
+  geom_point(aes(x=boys+shift,y=prop), data=g8, color="red",shape=16) +
+  geom_segment(aes(x = boys + shift, y = prop,
+                   xend = boys + shift, yend = 0),
+               data = g8, color = "red") +
+  ggtitle("Binomial(8, 0.5156)",
+          subtitle = "Blue = binomial, red = observed")
+
+ggplot(g_sum, aes(x = size, y = p_boy)) +
+  geom_line() +
+  geom_hline(yintercept = 0.5, color = "red", linetype = "dashed") +
+  xlab("Number of Children") +
+  ylab("Proportion of Boys") +
+  scale_x_continuous(breaks = 1:12) +
+  ggtitle("Geissler Data", subtitle = "Saxony, 1876-1885")
+```
+
+
+### Observations
+
+- The proportion of boys tends to grow as the family size increases, albeit slightly.
+
+## A function for all family sizes
+
+### Function
+
+Put the previous code into a function to make it easier to replicate for different family sizes.
+
+```{r Geissler-data-function, fig.height=2.5}
+## x is the geissler data (columns boys, girls, size, freq)
+## s is the size we filter on
+binom_fit_plot = function(x,s)
+{
+  x = x %>%
+    filter(size==s) %>%
+    mutate(prop = freq/sum(freq))
+  
+  x_sum = x %>%
+  summarize(
+    boys = sum(boys*freq),
+    girls = sum(girls*freq),
+    total = sum(size*freq),
+    p_boy = boys/total,
+    p_girl = girls/total
+  )
+
+  x = x %>%
+    mutate(p_binom = dbinom(0:s,s,x_sum$p_boy))
+
+  p_boy = x_sum$p_boy
+  shift = 0.15
+  g = gbinom(s, round(p_boy, 4)) +
+    geom_point(aes(x=boys, y=x$p_binom), data=x, color="blue",shape=16) +
+    geom_point(aes(x=boys +shift, y=x$prop), data=x, color="red",shape=16) +
+    geom_segment(aes(x = boys + shift, y = prop,
+                   xend = boys + shift, yend = 0),
+               data = x, color = "red") +
+    ggtitle(paste0("Binomial (", s, ",", round(p_boy,4), ")"),
+            subtitle = "Blue = binomial, red = observed") +
+    xlab("# of boys") +
+    scale_x_continuous(breaks=0:s) +
+    theme_bw()
+  return ( g )
+}
+
+for ( s in 1:12 )
+  plot( binom_fit_plot(geissler,s) )
+```
+
+### A Randomization Test
+
+> Can the apparent overdispersion be explained by chance?
+
+Test logic:
+
+1. For a fixed family size (say 8), calculate the sum of absolute differences between observed frequencies and the binomial estimated probabilities.
+
+2. Generate a random sample of the same number of families assuming the binomial model is true.
+
+3. Estimate the binomial probabilities from the data.
+
+4. Calculate the test statistic
+
+5. Compare the test statistic from the real data to the sampling distribution of the test statistic.
+
+6. Draw a conclusion.
+
+```{r test-stat}
+## x is a vector of counts from 0 to size
+##   with the number of families with that many boys
+get_rstat = function(x)
+{
+  n = length(x) - 1
+  boys = 0:n
+  observed_p = x/sum(x)
+  est_p = sum(boys*x) / sum(n*x)
+  binom_p = dbinom(boys,n,est_p)
+  return ( sum(abs(observed_p - binom_p)) )
+}
+```
+
+```{r apply-test-8, cache = TRUE}
+x_8 = geissler %>%
+  filter(size==8) %>%
+  pull(freq)
+p_8 = sum(0:8*x_8) / sum(8*x_8)
+families_8 = sum(x_8)
+
+B = 10000
+test_8 = numeric(B)
+
+for ( i in 1:B )
+{
+  boys = rbinom(families_8,8,p_8)
+  x = tabulate(boys+1,9)
+  test_8[i] = get_rstat(x)
+}
+
+df8 = tibble(x=test_8)
+
+ggplot(df8, aes(x=x)) +
+  geom_density() +
+  geom_vline(xintercept = get_rstat(x_8),
+             color="red", linetype="dashed")
+```
+
+## Family Size 6 Example
+
+```{r, fig.height=2}
+size6 = geissler %>%
+  filter(size==6) %>%
+  mutate(prop = freq/sum(freq))
+
+size6_sum = size6 %>%
+  summarize(
+    families = sum(freq),
+    boys = sum(boys*freq),
+    girls = sum(girls*freq),
+    total = sum(size*freq),
+    p_boy = boys/total,
+    p_girl = girls/total
+  )
+
+size6_sum
+
+p_6 = size6_sum$p_boy
+
+size6 = size6 %>%
+  mutate(p_binom = dbinom(0:6,6,p_6))
+
+binom_fit_plot(geissler,6)
+```
+
+### Three Models
+
+Let $X_i$ be the number of boys among the first 6 children in the $i$ family of size 7 or more from the Geissler data set. There are `r size6_sum$families` families in this part of the data.
+
+#### Binomial Model
+
+$$
+X_i \given p \sim \text{Binomial}(6,p), \quad \text{for all $i$}
+$$
+$$
+\mathsf{P}(X_i = x) = \binom{n}{x} p^x(1-p)^{n-x},
+\quad \text{for $x=0,1,\ldots,n$}
+$$
+where $0<p<1$.
+
+#### Beta-Binomial Model
+
+$$
+X_i \given \alpha,\beta \sim \text{Beta-Binomial}(6,\alpha,\beta),
+\quad \text{for all $i$}
+$$
+$$
+\mathsf{P}(X_i = x) = \binom{n}{x} \frac{B(x+\alpha,n-x+\beta)}{B(\alpha,\beta)},
+\quad \text{for $x=0,1,\ldots,n$}
+$$
+where $\alpha>0$ and $\beta>0$.
+
+#### General Independence Model
+
+$$
+X_i \given \mathrm{p} = (p_0,\ldots,p_6) \sim F(\mathrm{p})
+$$
+$$
+\mathsf{P}(X_i = x) = p_x,
+\quad \text{for $x=0,1,\ldots,n$}
+$$
+where $p_x>0$ for all $x$ and $\sum_{x=0^n} p_x = 1$.
+
+### Maximum Likelihood Estimation
+
+Suppose that there are $m_x$ families of size 6 that have $x$ boys.
+
+- The maximum likelihood estimate of $p$ for the **binomial model** is straightforward:
+    - Find the total number of boys divided by the total number of children in the families.
+$$    
+\hat{p} = \frac{\sum_{x=0}^6 x m_x}{6\sum_{x=0}^6 m_x}
+$$
+- The maximum likelihood estimate for the **general independence model** is also straightforward:
+    - Just calculate the observed proportions.
+$$
+\hat{p}_x = \frac{m_x}{\sum_{i=0}^6 m_x}
+$$
+- For the beta-binomial model,
+it is more complicated.
+
+## R code for Beta-Binomial
+
+A code block included in the source file provides these functions:
+
+- `dbb()`: probabilities for the beta-binomial distribution
+- `mlebb()`: calculate maximum likelihood estimates from a summary of counts of sample values.
+
+```{r beta-binomial, include=FALSE}
+## beta-binomial density
+dbb = function(x,n,a,b,log=FALSE)
+{
+  log_d = lchoose(n,x) +
+    lbeta(x+a,n-x+b) -
+    lbeta(a,b)
+  if ( log )
+    return ( log_d )
+  return ( exp( log_d ) )
+}
+
+## This function assumes that the sample x_1,\ldots,x_m
+## (all assumed from the same beta-binomial distribution)
+## has been summarized into a vector of length n+1
+## with the tabulated counts for each outcome from 0 to n
+## The function returns the MLEs of the mean and variance
+mbb = function(x)
+{
+  n = length(x) - 1
+  m = sum(x)
+  mx = sum((0:n)*x)/m
+  vx = sum(x*(0:n - mx)^2)/m
+  return(tibble(mx,vx))
+}
+
+## Log-likelihood function for (mu,phi)
+## x are the counts from 0 to n
+## theta = c(mu,phi)
+lmpbb = function(theta,x)
+{
+  mu = theta[1]
+  phi = theta[2]
+  alpha = mu*phi
+  beta = (1-mu)*phi
+  n = length(x) - 1
+  return( sum(x*dbb(0:n,n,alpha,beta,log=TRUE)) )
+}
+
+## Use optim to find mle estimates of alpha and beta from counts
+## Use method of moments to start.
+## Find mu and phi. Then translate to alpha and beta.
+## If the returned convergence is not 0,
+##   then there was an error in the optimization
+mlebb = function(x)
+{
+  n = length(x)-1
+  moments = mbb(x)
+  mx = moments$mx
+  vx = moments$vx
+  mu_0 = mx/n
+  phi_0 = (n*n*mu_0*(1-mu_0) - vx)/(vx - n*mu_0*(1-mu_0))
+  opt = optim(c(mu_0,phi_0),lmpbb,x=x,
+              control = list(fnscale=-1),
+              method = "L-BFGS-B",
+              lower = c(1e-7,1e-7),
+              upper = c(1-1e-7,Inf))
+  df = tibble(
+    mu = opt$par[1],
+    phi = opt$par[2],
+    alpha = mu*phi,
+    beta = (1-mu)*phi,
+    logl = opt$value,
+    convergence = opt$convergence)
+  
+  return( df )
+}
+```
+
+### Estimation
+
+#### Binomial Model
+
+```{r est-binom}
+size6 = geissler %>%
+  filter(size == 6)
+x6 = size6 %>%
+  pull(freq)
+##
+p_hat = sum(x6*(0:6))/(6*sum(x6))
+logl_1 = sum(x6*dbinom(0:6,6,p_hat,log=TRUE))
+logl_1
+```
+
+#### Beta-Binomial Model
+
+```{r est-bb}
+bb_6 = mlebb(x6)
+bb_6
+```
+
+### Likelihood Ratio Tests
+
+$$
+H_0: \text{binomial model}
+$$
+$$
+H_a: \text{beta-binomial model}
+$$
+
+#### test statistic
+
+$$
+G = -2 \times (\log L_0 - \log L_1)
+$$
+
+```{r lrt-1}
+G = -2 * (logl_1 - bb_6$logl)
+G
+```
+
+#### Sampling Distribution
+
+The sampling distribution of the test statistic $G$ is approximately chi-squared with one degree of freedom.
+In general, for large enough sample sizes,
+the test statistic from a likelihood ratio test will have an approximate chi-square distribution with degrees of freedom equal to the difference in the number of free parameters between the models for the alternative and null hypotheses.
+
+```{r p-value}
+p_value_1 = 1 - pchisq(G,1)
+p_value_1
+```
+
+#### Interpretation
+
+There is very strong evidence ($p<10^{-8}$, $G=36.89$, likelihood ratio test), that the Geissler data for families with six children is better fit by a beta-binomial distribution which is consistent with the heterogeneity of the probabilities of the sexes of children among families than the binomial distribution which assumes the same probabilities for each family.
+
+## A test versus a general model
+
+$$
+H_0: \text{binomial model}
+$$
+$$
+H_a: \text{general independence model}
+$$
+
+#### General Independent Model
+
+```{r est-binom-2}
+## use observed frequencies as the probabilities
+p_hat_2 = x6/sum(x6)
+logl_2 = sum(x6*log(p_hat_2))
+logl_2
+```
+
+#### Test Statistic
+
+$$
+G = -2 \times (\log L_0 - \log L_1)
+$$
+
+```{r lrt-2}
+G2 = -2 * (logl_1 - logl_2)
+G2
+```
+
+#### Sampling Distribution
+
+There are seven probabilities in the general distribtuion, but they add up to one, so there are only six free parameters to estimate. As $6-1=5$, we calculate a p-value by finding the area to the right of `r G2` under a chi-square density with 5 degrees of freedom.
+
+```{r p-value-2}
+p_value_2 = 1 - pchisq(G2,5)
+p_value_2
+```
+
+#### Interpretation
+
+There is very strong evidence ($p<10^{-16}$, $G=109.00$, likelihood ratio test), that the Geissler data for families with six children is better fit by a general probability distribution than the binomial distribution.
+
+## Summary
+
+- The data set contains the gender distributions among the first six children for 72,069 Saxon families with seven or more children.
+- The binomial model, the beta-binomial model, and the general independence model each specify a probability distribution for a single family to have from 0 to 6 boys.
+- These probabilities are summarized in the following table.
+
+```{r summary, echo=FALSE}
+p_obs = x6/sum(x6)
+p_binom = dbinom(0:6,6,p_hat)
+p_bb = dbb(0:6,6,bb_6$alpha,bb_6$beta)
+tab_6 = tibble(
+  boys = 0:6,
+  `# families` = x6,
+  observed = round(p_obs,5),
+  binomial = round(p_binom,5),
+  `beta-binomial` = round(p_bb,5),
+  general = round(p_obs,5))
+
+library(kableExtra)
+kable(tab_6) %>%
+kable_styling(
+  bootstrap_options = c("striped", "condensed"),
+  full_width = FALSE)
+```
+
+The log-likelihood for each model is of the form
+$$
+\ln L = \sum_{x=0}^6 m_x \ln p_x
+$$
+where $m_x$ are the counts of the families with $x$ boys out of 6.
+A summary of the log-likelihoods for each of the three models follow.
+
+```{r log-like-table, echo=FALSE}
+tab_logl = tibble(
+  model = c("Binomial","Beta-Binomial","General"),
+  `log-likelihood` = c(logl_1,bb_6$logl,logl_2),
+  difference = c(0,bb_6$logl - logl_1,logl_2 - logl_1),
+  `# parameters` = c(1,2,6))
+kable(tab_logl) %>%
+  kable_styling(
+  bootstrap_options = c("striped", "condensed"),
+  full_width = FALSE)
+```
+
+The differences in log-likelihood as the models become more complex are much larger than twice the differences in the number of parameters, and so each more complicated model fits the data significantly better than the previous model.
+Note, however, that the actual estimated probabilities for the three models are not that different, but there is so much data that we have the power to detect slight deviations from the simpler models.

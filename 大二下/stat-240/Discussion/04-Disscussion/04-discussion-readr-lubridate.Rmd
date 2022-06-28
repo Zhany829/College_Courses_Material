@@ -1,0 +1,146 @@
+---
+title: "STAT 240 Discussion 4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+source("../../scripts/viridis.R")
+```
+
+## Questions
+
+### 1
+
+> The code block below reads in the data, and then modifies it. Add comments by replacing the text COMMENT next to the (a), (b), (c), (d) to briefly summarize what the line of code following does.
+
+```{r}
+### Load a file where the delimiter character is a (a) COMMENT
+atl <- read_tsv("../../data/atlanta-2018.tsv") %>%
+  ## (b) COMMENT
+  select(-ends_with("wait")) %>%
+  ## (c) COMMENT
+  select(-contains("_n_")) %>%
+  select(-terminal,-hour,-all_excluded,-all_booths) %>%
+  rename(passengers = all_total,
+         flights = all_flights) %>%
+  group_by(airport,date) %>%
+  summarize(passengers = sum(passengers),
+            flights = sum(flights)) %>%
+  ## (d) COMMENT
+  mutate(date = mdy(date)) %>%
+  mutate(wday = wday(date, label=TRUE)) %>%
+  mutate(month = month(date, label=TRUE)) %>%
+  select(airport,date,month,wday,everything()) %>% 
+  arrange(date)
+```
+
+
+
+
+### 2
+
+> After running the r chunk for problem 1, the data frame `atl` should have one row per day of the year and include variables passengers and flights for the totals of each day. 
+
+- Create a summary data frame named `atl_sum` with columns for the average number of international flight arrivals per day and the average number of daily passengers arriving on international flights per day in Atlanta by day of the week.  
+- This data frame will have three columns, one for day of the week, and one for each of the two quantitative variables.  
+- Print out the summary data frame in a table with the rows arranged in order by days of the week from Sunday through Saturday.
+- Also, print out the summary data frame in a table with the rows arranged in order from most to least average number of international flight arrivals.
+
+*Note:  You should have two summary data frames print, each arranged in a different order according to the directions above.*
+
+```{r}
+
+```
+
+
+
+
+### 3
+
+> On what single date in April of 2018 did the largest number of international passengers arrive at the Atlanta airport? How many passengers were there? What day of the week was this date?
+
+```{r}
+
+```
+
+
+
+### 4
+
+> Read in the data for Chicago using the appropriate `read_*()` command.  (Each row in the data file represents an hour of a day. You will need to transform the data to obtain the values to graph. Borrow code from problem 1 to help.)
+
+-  Make a bar plot that shows the mean number of passengers arriving per day to O'Hare international airport by day of the week. 
+
+```{r}
+
+```
+
+
+
+### 5
+
+> Read in the data for Denver using the appropriate `read_*()` command. (Each row in the data file represents an hour of a day. You will need to transform the data to obtain the values to graph. Borrow code from problem 1 to help.)
+
+- Make a line plot that shows the total number of international flights arriving to Denver international airport by month. (Note: add `group = 1` as an aesthetic so that there is a single line for all months.)
+
+```{r}
+
+```
+
+
+
+### Lubridate practice
+
+Code below creates a datetime object with the current date and time.
+Write one line of code to extract from this datetime the requested information.
+(Your answers will depend on the exact time you knit the document.)
+
+```{r}
+now_dt <- now()
+now_dt
+```
+
+
+
+### 6
+
+> The year
+
+```{r}
+
+```
+
+
+
+### 7
+
+> The month as a number
+
+```{r}
+
+```
+
+
+
+### 8
+
+> The day of the week with the full name displayed (i.e., not abbreviated)
+
+```{r}
+
+```
+
+
+
+### 9
+
+> The hour
+
+```{r}
+
+```
+
+

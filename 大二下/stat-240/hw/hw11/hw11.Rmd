@@ -1,0 +1,359 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warnings=FALSE)
+library(tidyverse)
+library(lubridate)
+library(modelr)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Assignment 11
+
+#### Due Friday, April 16, 11:59 PM CT
+
+
+### Problems
+
+### 1
+
+Multiple choice:  The least-squares regression line is  
+
+(a) the line that makes the sum of the squares of the vertical distances of the data points to the line as small as possible  
+(b) the line that best splits the data in half, with half of the points above the line and half below the line    
+(c) the line that makes the correlation of the data as large as possible.  
+(d) all of the above  
+(e) a and b  
+(f) a and c  
+(g) b and c  
+
+
+-a
+
+
+
+## Problems on Dugong data
+
+The *dugong.csv* data set contains data on 27 dugong, which are marine mammals.  Since we cannot ask a dugong how old it is (well, we can ask, but we wouldn't likely get a clear answer!), it's age needs to be estimated by other factors.  The variables in *dugong.csv* are length (in meters) and age (in years).  
+
+Suppose we are interested in using the length of a dugong to predict its age.  We can fit a regression model for this!
+
+Credit:  The *dugong.csv* file is from Data8 at UC-Berkeley.
+
+
+### 2
+
+- Read in the *dugong.csv* data set.  
+-  Create a scatter plot with length on the x-axis and age on the y-axis; be sure to add descriptive axis labels and a title.  
+-  Using `geom_smooth()` add the least-squares line to your plot.  
+
+```{r}
+dugong <- read_csv("../../data/dugong.csv")
+ggplot(dugong, aes(x = Length, y = Age)) +
+  geom_point() +
+  geom_smooth(se = FALSE, method = "lm")+
+  labs(x = "Length", y = "Age") +
+  ggtitle("Length vs. Age of dugong")
+```
+
+### 3
+
+- Using your dugong data from question 2, estimate the slope and intercept of a least squares linear model fit to age as the response variable and length as the explanatory variable.  
+- Compute the estimate slope and intercept using the regression formulas below and using the `lm()` function.
+
+How do the estimates using the two methods compare?
+
+-The estimates are the same.
+
+Slope:
+$$
+\hat{b}_1 = r \frac{s_y}{s_x}
+$$
+where $r$ is the correlation between response variable $y$ and explanatory variable $x$, $s_y$ is the standard deviation of $y$, and $s_x$ is the standard deviation of $x$.
+
+Intercept:
+$$
+\hat{b}_0 = \bar{y} - \hat{b}_1\bar{x}
+$$
+where $\bar{y}$ is the sample mean of $y$ and $\bar{x}$ is the sample mean of $x$.
+```{r}
+age<- pull(dugong, Age)
+length <- pull(dugong,Length)
+age_sd <- sd(age)
+length_sd <- sd(length)
+r <- cor(length, age)
+slope <- r* age_sd / length_sd
+slope
+age_mean <- mean(age)
+length_mean <- mean(length)
+intercept <- age_mean - slope * length_mean
+intercept
+
+```
+
+
+### 4
+
+- Re-create the graphic from question 2.  
+- Add the regression model fit from the previous question (using the `lm()` method) to the plot in green. You may find `geom_abline()` useful for adding your fit model to the plot.  
+- Using this estimated model, predict the age of a dugong that is 2.5 meters long.  
+-  Plot this predicted value as a red point on your plot.
+```{r}
+predict <- intercept + slope * 2.5
+ggplot(dugong, aes(x = Length, y = Age)) +
+  geom_point() +
+  geom_abline(slope = slope, intercept = intercept) +
+  geom_point(aes(x = 2.5,y = predict), color = "Green")
+```
+
+
+### 5
+
+For the fitted model from question 3 fit (using the `lm()` method), display a plot of the residuals versus dugong length.  
+
+- Add to the plot a horizontal line at `y = 0`.  
+- In addition, use `geom_smooth()` to add a smooth curve to the residual plot to help identify patterns.  
+
+Does the residual plot resemble random scatter around the horizontal line, or are there patterns in the residual plot which suggest a lack of model fit?
+
+-the residual plot doesn’t resemble random scatter around the horizontal line,the resideual near the boundaries are positive and the middle is negative, suggesting a lack of model fit, the relation could be quadratic.
+
+You may find the **modelr** function `add_residuals()` to be helpful.
+
+```{r}
+fit <-lm(Age ~ Length, data=dugong)
+coefficients (fit)
+q5 <-dugong %>%
+  add_residuals(fit)
+
+ggplot(q5,aes(x=Length,y=resid))+
+  geom_point()+
+  geom_hline(aes(yintercept=0),linetype="dashed",color="red")+
+  geom_smooth(se=FALSE)
+```
+
+
+## Problems on Exoplanet data
+
+
+Run the chunk below to import the *exoplanets-3sept2020.csv* data file and set-up the data frame `exo`.  Note that `exo` includes the variables `index`, `planet`, `star`, `method`, `radius`, and `mass`, and is filtered to only include exoplanets discovered using the Radial Velocity or Transit methods with a radius or mass estimate (or both) not missing.
+
+Use `exo` to address the subsequent question.
+
+```{r data-import}
+## Read in the csv file
+## Select confirmed planets, rename some variables
+planets <- read_csv("../../data/exoplanets-3sept2020.csv") %>%
+  filter(default_flag == 1) %>%
+  select(pl_name, hostname, discoverymethod, disc_year, sy_pnum, pl_rade, pl_bmasse) %>%
+  rename(planet=pl_name, star=hostname, method=discoverymethod, year=disc_year,
+         number=sy_pnum, radius=pl_rade, mass=pl_bmasse)
+
+
+exo <- planets %>% 
+  filter(method %in% c("Radial Velocity", "Transit")) %>% 
+  filter(!is.na(radius) | !is.na(mass)) %>% 
+  select(-year, -number) %>% 
+  mutate(index = row_number()) %>% 
+  select(index, everything())
+
+nrow(exo)
+
+head(exo)
+```
+
+
+
+### 6
+
+Create and display a table that contains the following variables for each of the two methods (Radial Velocity and Transit methods), with one row for each method.
+
+Comment on any striking differences in these variables between methods.
+
+- `n`, the total number of observations
+- `p_radius_na`, the proportion of radius measurements missing
+- `p_mass_na`, the proportion of mass measurements missing
+- `log10_radius_mean`, the mean of the $\log_{10}$ radius (among cases that are not missing)
+- `log10_mass_mean`, the mean of the $\log_{10}$ mass measurements (among cases that are not missing)
+- `log10_radius_sd`, the standard deviation of the $\log_{10}$ radius (among cases that are not missing)
+- `log10_mass_sd`, the standard deviation of the $\log_{10}$ mass measurements (among cases that are not missing)
+
+```{r}
+exo %>%
+  group_by(method) %>%
+  summarize(n = n(),
+            p_radius_na = sum(is.na(radius)) / n,
+            p_mass_na = sum(is.na(mass)) / n,
+            log10_radius_mean = mean(log10(radius), na.rm = TRUE),
+            log10_mass_mean = mean(log10(mass), na.rm = TRUE),
+            log10_radius_sd = sd(log10(radius), na.rm = TRUE),
+            log10_mass_sd = sd(log10(mass), na.rm = TRUE)
+  )
+```
+
+- The planets discovered by "Radial Velocity" method is less than discovered by "Transit" method. Few planets found by "Radial Velocity" miss their radius data but most of planets found by "Transit" method miss their radius data. Instead, no planets found by "Transit" miss its mass data but plenty of planets found by "Transit" method miss their mass data. The planets found by "Radial Velocity" have larger average mass and radius than those found by "Transit".
+
+
+
+### 7
+
+Create and display a scatter plot that shows $\log_{10} radius$ on the x axis and $\log_{10} mass$ on the y axis using different colors for each method.
+
+Add least squares regression lines to the plot with separate lines for each method using `geom_smooth(method="lm", se=FALSE)`.
+
+(It may help the visibility of the plotted lines if the points are made partially transparent using the `alpha` aesthetic.)
+
+```{r}
+ggplot(exo, aes(x = log10(radius), y = log10(mass), color = method)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Mass", y = "Radius") +
+  theme_bw()
+```
+
+
+### 8
+
+Fit three separate simple linear regression models to predict $\log_{10}$radius
+using $\log_{10}$mass: 
+
+  *(1)* using only data from the radial velocity method  
+  *(2)* using only data from the transit method  
+  *(3)* using the data from both methods.
+
+- To get the radial velocity-only or the transit-only data, you can filter the `exo` data frame using the variable `method`.
+
+Then do the following:
+
+- Create a table with a row for each subset of the data (*(1)*, *(2)*, and  *(3)*) and columns for the estimates of the intercepts, standard errors of the intercepts, slopes, standard errors of the slopes, and the degrees of freedom (number of sample points minus two) from each fitted model.  
+- Display the table.
+
+
+##### Notes: 
+
+- For a fitted model object named `fit`, the command `coef(fit)` extracts the estimated coefficients.  
+- You may also use `coef(summary(fit))` to extract the entire coefficient table from the summary.  
+- The function `df.residual(fit)` will extract the degrees of freedom from the fitted model object.
+    - In a simple linear regression model, this is just $n-2$.
+
+- Below is a function that extracts the estimates, standard errors, as a tibble.
+- You might find it useful to modify the code so that it returns the values you want in a tibble with a single row.
+
+```{r}
+extract_lm <- function(x)
+{
+  out <- as_tibble(coef(summary(x)), rownames = "parameter") %>% 
+    rename(estimate = Estimate,
+           se = `Std. Error`,
+           t = `t value`,
+           p_value = `Pr(>|t|)`) %>%
+    mutate(parameter=
+             case_when(
+               parameter=="log10(radius)" ~ "slope",
+               TRUE ~ "intercepts"))%>%
+    pivot_wider(names_from = parameter,values_from = c(estimate,se))%>%
+    mutate(df=df.residual(x))%>%
+    select(-c(p_value,t))%>%
+    fill(estimate_intercepts,se_intercepts)%>%
+    fill(estimate_slope,se_slope,.direction = c( "up"))%>%
+    unique()
+
+  return ( out )
+}
+exo1 <- exo %>%
+  filter(method=="Radial Velocity") %>%
+  drop_na() 
+exo2 <- exo %>%
+  drop_na() %>% 
+  filter(method=="Transit")
+fit_exo <-lm(log10(mass) ~ log10(radius), data=exo)
+fit_exo1 <-lm(log10(mass) ~ log10(radius), data=exo1)
+fit_exo2 <-lm(log10(mass) ~ log10(radius), data=exo2)
+
+data <- rbind(extract_lm(fit_exo1),extract_lm(fit_exo2),extract_lm(fit_exo)) %>%
+  mutate(data=c("radial_velocity","transit","all"))
+  
+data
+```
+
+
+### 9
+
+The estimates of the slopes using the data from each method (Radial Velocity and Transit) separately are not the same.  
+
+- Let $\beta_{\text{rv}}$ (radial velocity) and $\beta_{\text{t}}$ (transit)
+be the unknown slopes in regression lines to predict $\log_{10}$mass
+from $\log_{10}$radius for the population of all exoplanets detectable from Earth
+where we consider our data as random samples this population.
+
+Complete the following hypothesis test.
+
+$H_0:\ \beta_{\text{rv}} = \beta_{\text{t}}$    
+$H_A:\ \beta_{\text{rv}} \neq \beta_{\text{t}}$
+
+
+*(a)* Calculate a test statistic
+
+$$
+T = \frac{\hat{\beta}_{\text{rv}} - \hat{\beta}_{\text{t}}}
+{\text{SE}(\hat{\beta}_{\text{rv}} - \hat{\beta}_{\text{t}})}
+$$
+
+where the estimated standard error in the denominator is calculated using
+the expression for the standard error of a difference from independent samples.
+$$
+\text{SE}(\hat{\beta}_{\text{rv}} - \hat{\beta}_{\text{t}}) = \sqrt{\text{SE}(\hat{\beta}_{\text{rv}})^2 + \text{SE}(\hat{\beta}_{\text{t}})^2}
+$$
+```{r}
+diff_est <-data$estimate_slope[1]-data$estimate_slope[2]
+diff_se <-sqrt(data$se_slope[1]^2+data$se_slope[2]^2)
+t_stat<- diff_est/diff_se
+t_stat
+```
+
+
+*(b)*  Assume that the sampling distribution of the test statistic under the null hypothesis is t with degrees of freedom equal to the sum of the degrees of freedom from the two separate regression models.
+
+- Using this assumption, calculate and display the p-value.  
+- Make a graph of the corresponding t distribution and shade in an area that corresponds to the p-value.  
+- Interpret the result in context.
+
+
+```{r}
+p<-pt(t_stat,df=data$df[1]+data$df[2],lower.tail=FALSE)*2
+p
+gt(data$df[1]+data$df[2])+
+  geom_vline(xintercept = c(-abs(t_stat),t_stat), color = "red", linetype = "dashed") +
+  geom_t_fill(data$df[1]+data$df[2], a = t_stat,b=8) +
+  geom_t_fill(data$df[1]+data$df[2], a= -8,b = -abs(t_stat)) 
+```
+ 
+-Since p-value is greater than 0.05, which is not statistically significant. There is no strong evidence that the null hypothesis is wrong, and no effect was observed.
+
+### 10
+
+For the fitted model using the combined methods of estimation (i.e., using the data from both methods), display a plot of the residuals versus $\log_{10}$radius.   
+
+- Add to the plot a horizontal line at `y = 0`.  
+- In addition, use `geom_smooth()` to add a smooth curve to the residual plot to help identify patterns.  
+
+Does the residual plot resemble random scatter around the horizontal line, or are there patterns in the residual plot which suggest a lack of model fit?
+
+You may find the **modelr** function `add_residuals()` to be helpful.
+```{r}
+q10 <-exo %>%
+  drop_na()%>%
+  add_residuals(fit_exo)
+
+ggplot(q10,aes(x=log10(radius),y=resid))+
+  geom_point()+
+  geom_hline(aes(yintercept=0),linetype="dashed",color="red")+
+  geom_smooth(se=FALSE)
+```
+
+- There are patterns in the residual plot which suggest a lack of model fit
+
+

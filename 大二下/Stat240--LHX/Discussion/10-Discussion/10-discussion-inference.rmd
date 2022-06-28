@@ -1,0 +1,197 @@
+---
+title: "STAT 240 Discussion 10"
+output: html_document
+---
+
+## Group 319C 
+
+## LILY FRANKS, **HAOXUAN LU**, SHRUTHI SRINIVASAN, MICHAEL HANDLER
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Questions
+
+
+## Data
+
+The following code reads in the Madison weather data and calculates the average July temperature for each year.
+Treat the years from 1869 to 1898 as *early Madison* and from 1991 to 2020 as *recent Madison*.
+
+```{r read-data, echo=FALSE}
+## Read and transform the Madison weather data
+mw <- read_csv("../../data/madison-weather-2020-clean-2.csv")
+
+mw_july <- mw %>%
+  filter(month=="Jul") %>%
+  filter(year < 1899 | year > 1990) %>%
+  group_by(year) %>%
+  summarize(tavg = mean(tavg)) %>%
+  mutate(era = case_when(
+    year < 1900 ~ "early",
+    year > 1989 ~ "recent"))
+#view(mw_july)
+```
+
+### 1 
+
+> Calculate the mean and standard deviation of the average July temperature separately for early Madison and recent Madison.
+
+```{r problem-1}
+q1 = mw_july%>%
+  group_by(era)%>%
+  summarize(mean = mean(tavg), sd = sd(tavg))
+q1
+```
+
+
+
+### 2
+
+> Make a plot with separate density curves for the early and recent July average temperatures.
+
+```{r problem-2}
+mw_july%>%
+  group_by(era)%>%
+  ggplot(aes(x = tavg, color = era)) +
+  geom_density()
+```
+
+
+
+
+### 3
+
+> Treat the 30 years in each time period as separate samples. Use the formulas in the instructions HTML to find 95% confidence intervals for the average July temperature in each time period. Compare results with the output of the `t.test()` function in the chunk below.
+
+```{r problem-3a}
+
+x1 <- mw_july %>%
+  filter(era=="early") %>%
+  pull(tavg)
+
+t.test(x1)
+
+
+x2 <- mw_july %>%
+  filter(era=="recent") %>%
+  pull(tavg)
+
+t.test(x2)
+```
+
+```{r problem-3}
+#early era CI
+# sd
+s1 = q1%>%
+  filter(era=="early")%>%
+  pull(sd)
+
+#xbar
+xbar1 = q1%>%
+  filter(era=="early")%>%
+  pull(mean)
+
+# t*
+x1t = qt(.025, 29)
+
+early_CI <- tibble(early_UCL = xbar1 + (x1t * (s1 / sqrt(30))),
+                   early_LCL = xbar1 - (x1t * (s1 / sqrt(30)))
+                   )
+early_CI
+
+#recent era CI
+
+# sd
+s2 = q1%>%
+  filter(era=="recent")%>%
+  pull(sd)
+
+#xbar
+xbar2 = q1%>%
+  filter(era=="recent")%>%
+  pull(mean)
+
+recent_CI <- tibble(recent_UCL = xbar2 + (x1t * (s2 / sqrt(30))),
+                    recent_LCL = xbar2 - (x1t * (s2 / sqrt(30)))
+                    )
+recent_CI
+
+
+
+```
+The results of the confidence intervals presented in the one sample t-test output of the t.test() function is reflected in the confidence intervals we constructed. 
+
+
+### 4
+
+> Draw a graph of a t distribution with 29 degrees of freedom and with the middle 95% of the distribution shaded in.
+
+```{r problem-4}
+
+gt(df = 29)+
+ geom_t_fill(df= 29, a=qt(.975, 29), b=qt(.025, 29), fill = "skyblue") +
+  labs(title = "t-distribution", 
+       subtitle = "DF = 29°")
+
+```
+
+
+
+### 5
+
+> Find a 95% confidence interval for the change (early minus recent) of average July temperatures in Madison.
+Calculate the difference in sample means and calculate the standard error for the difference.
+Use the `t.test()` function result to find the estimated degrees of freedom.
+Find the critical $t^*$ value for a 95% confidence interval for this number of degrees of freedom.
+Verify that the hand calculation for the confidence interval matches the `t.test()` result.
+
+```{r problem-5}
+t.test(x1,x2)
+
+x5_a <- mean(x1) - mean(x2) + qt(0.025,54.733) * sqrt(sd(x1)^2/30 + sd(x2)^2/30)
+x5_a
+
+x5_b <- mean(x1) - mean(x2) + qt(0.975,54.733) * sqrt(sd(x1)^2/30 + sd(x2)^2/30)
+x5_b
+```
+
+
+
+### 6
+
+> Test the hypothesis that the mean July temperature in Madison in the early era is equal to that in the recent era versus that alternative that they are different.
+Calculate the test statistic $t$ from the equations
+and verify it matches the result from `t.test()`. Write a conclusion in context to interpret the result of this hypothesis test.
+
+```{r problem-6}
+t.test(x1,x2)
+
+t_value <- (mean(x1) - mean(x2)) / sqrt(sd(x1)^2/30 + sd(x2)^2/30)
+t_value
+
+p <- pt((mean(x1) - mean(x2)) / sqrt(sd(x1)^2/30 + sd(x2)^2/30), 54.733, lower.tail = FALSE)*2
+p
+```
+
+- Because p_value=0.2889>0.05, we failed to reject the null hypothesis
+
+
+### 7
+
+> Make a plot of the t distribution for the previous problem. Add a vertical line at the test statistic and shade in the two tail areas that correspond to the p-value.
+
+```{r problem-7}
+gt(54.733)  +
+  geom_t_fill(54.733, a = -4,b = -t_value) +
+  geom_t_fill(54.733, a = t_value, b = 4) +
+  geom_vline(xintercept = t_value)
+```
+
+
+

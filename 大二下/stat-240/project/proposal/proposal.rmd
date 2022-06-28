@@ -1,0 +1,29 @@
+---
+title: "Final Project Proposal"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Proposal
+
+
+## Members
+WAI ZIN LINN, ZHAN YU, MARTIN LOZANO, WILL HU
+
+## Communication
+Every Sunday 9:30 p.m. at Madison Time. Using zoom and Wechat to communicate.
+
+## Questions of interest
+-1.Which age group has the higher rate of suicide? -15-24,25-34,35-54,55-74,75+
+-2.Which country has the higher rate of suicide?-Albania,Latvia,Romania...
+-3.What is relationship between suicide rate and gdp per year?
+
+## Source of data
+-Source:https://www.kaggle.com/russellyates88/suicide-rates-overview-1985-to-2016
+The dataset describes the suicide rate among several countries and it also provides some data about GDP, year, sex, generation etc.
+
+## Summary of methods to analyze data
+We plan to separate the dataset by age group, country and GDP. We can further analyze the suicide rate among countries by using bar graph to determine the country with the highest suicide rate, and use scatter plot to determine the relationship between suicide rate and GDP per year.We will also perform a hypothesis test on our first question of interest to analyze suicide rate between different age groups.

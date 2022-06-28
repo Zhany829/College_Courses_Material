@@ -1,0 +1,197 @@
+---
+title: "STAT 240 Discussion 10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+## Members Present
+-**Zhan**, WAI ZIN LINN, WILL HU
+
+## Members Absent
+-Martin Lozano
+
+## Questions
+
+## Data
+
+The following code reads in the Madison Water Main Breaks data that we used on the midterm exam.  The code below also modifies and adds some new variables including `season`, and filters the variable `repair_time_minutes` to be positive and `season` to only include "winter" and "summer".  The resulting data frame, `water`, includes the following columns:
+
+- `OBJECTID` = unique identifier for each broken pipe   
+- `break_date` = date and time the break occurred      
+- `repair_time_minutes` = the length of the repair time in minutes     
+- `season` = season when the break occurred (only "winter" and "summer" included)   
+
+We are going to explore differences in repair times (`repair_time_minutes`) between winter and summer. The code below also prints out a table that summarizes some information about the data including the number of observations for each season.
+
+```{r read-data}
+## Read and prepare the data
+water_raw <- read_csv("../../data/madison_water_main_breaks.csv") 
+
+## Prepare the data
+water <- water_raw %>%
+  drop_na() %>%
+  mutate(break_date = ymd(str_sub(break_date, 1, 10))) %>%
+  rename(id = OBJECTID) %>%
+  mutate(month = month(break_date)) %>%
+  mutate(season = case_when(
+    month %in% c(12,1,2) ~ "winter",
+    month %in% 3:5 ~ "spring",
+    month %in% 6:8 ~ "summer",
+    month %in% 9:11 ~ "fall",
+  )) %>%
+  filter(repair_time_minutes > 0 & season %in% c("winter", "summer")) %>%
+  select(id, break_date,repair_time_minutes, season)
+
+water %>%
+  group_by(season) %>%
+  summarize(n = n(), min_repair_time = min(repair_time_minutes), max_repair_time = max(repair_time_minutes))
+```
+
+### 1 
+
+Calculate and print out the mean and standard deviation of the repair time separately for summer and winter.  
+```{r}
+q1 <- water%>%
+  group_by(season)%>%
+  summarise(mean=mean(repair_time_minutes),sd =sd(repair_time_minutes))
+q1
+  
+```
+
+
+### 2
+
+- Make a single plot displaying separate density curves (`geom_density()`) for the winter and summer repair times.  
+- Add appropriate axis labels and a descriptive title.
+```{r}
+water%>%
+  group_by(season)%>%
+  ggplot(aes(x = repair_time_minutes, color = season)) +
+  geom_density()+
+  ggtitle("Winter and Summer Repair Times")+
+  xlab("Repair Times")+
+  ylab("Density")
+```
+
+
+### 3
+
+- Treat the summer and winter observations as separate samples.  
+- Use the formulas in the instructions HTML to find 95% confidence intervals for the average repair time in the summer and winter.  
+
+How do your estimated confidence intervals compare with the confidence intervals of the `t.test()` function in the chunk below?
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+```{r}
+## Compare your results to the output displayed from this chunk.
+q3_winter <- water %>%
+  filter(season=="winter") %>%
+  mutate(n=n())
+
+x_winter <- mean(q3_winter$repair_time_minutes) + c(-1,1) * sd(q3_winter$repair_time_minutes)/sqrt(q3_winter$n[1])* qt(p=.975, df=1599)
+x_winter
+q3_summer <- water %>%
+  filter(season=="summer") %>%
+  mutate(n=n())
+
+x_summer <- mean(q3_summer$repair_time_minutes) + c(-1,1) * sd(q3_summer$repair_time_minutes)/sqrt(q3_summer$n[1])* qt(p=.975, df=249)
+x_summer
+## Winter
+x1 <- water %>%
+  filter(season=="winter") %>%
+  pull(repair_time_minutes)
+
+t.test(x1)
+
+## Summer
+x2 <- water %>%
+  filter(season=="summer") %>%
+  pull(repair_time_minutes)
+
+t.test(x2)
+```
+The results of the confidence intervals presented in the one sample t-test output of the t.test() function is reflected in the confidence intervals we constructed. 
+
+
+### 4
+
+- Draw a graph of a t distribution with 1599 degrees of freedom and with the middle 95% of the distribution shaded in.  
+- Draw a graph of a t distribution with 249 degrees of freedom and with the middle 95% of the distribution shaded in.
+
+Hint:  consider using functions such as `gt()`, `geom_t_fill()`, and `geom_t_density()` from the *ggprob.R* script.
+
+```{r}
+c1<-qt(p=.975, df=1599)
+c2<-qt(p=.975, df=249)
+
+gt(1599)+
+  geom_t_fill(1599, a=c1,b=-c1)
+gt(249)+
+  geom_t_fill(249, a=c2,b=-c2)
+```
+
+### 5
+
+Find a 95% confidence interval for the *difference* (winter minus summer) in average repair times for the water main breaks between breaks that occur in the winter and summer seasons in Madison.  To do this, carryout the following steps:
+
+- Calculate the difference in sample means and calculate the standard error for the difference.  
+-  Use the `t.test()` function result to find the estimated degrees of freedom.  
+-  Find the critical $t^*$ value for a 95% confidence interval for this number of degrees of freedom.  
+-  Print out your resulting confidence interval.  
+-  Verify that the hand calculation for the confidence interval matches the `t.test()` confidence interval.  
+
+```{r}
+t.test(x1,x2)
+mean_summer <- mean(x2)
+mean_winter <- mean(x1)
+se_summer <- sd(x2)/sqrt(250)
+se_winter <- sd(x1)/sqrt(1600)
+diff_mean <- mean_winter-mean_summer
+diff_mean
+se_diff <- sqrt(se_summer*se_summer + se_winter*se_winter)
+se_diff
+ci_5<- mean_winter-mean_summer + c(-1,1)*qt(p=.975, df=298.88)*sqrt((sd(x2)*sd(x2)/250)+(sd(x1)*sd(x1)/1600))
+ci_5
+```
+
+
+
+### 6
+
+Test the hypothesis that the mean repair time in Madison in the winter is equal to that in the summer versus that alternative that they are different.  To do this, carryout the following steps:
+
+-  Calculate the test statistic $t$ from the equations displayed in the instructions HTML.  
+-  Verify that your result matches the result from `t.test()`.  
+-  Write a conclusion in context to interpret the result of this hypothesis test.
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+```{r}
+t.test(x1,x2)
+test_statistic_t <- ((diff_mean-0)/se_diff)
+test_statistic_t
+```
+
+
+
+### 7
+
+- Make a plot of the t distribution for the previous problem.  
+- Add a vertical dashed red line at the test statistic.  
+- Shade in the two tail areas that correspond to the p-value.  
+
+Note:  It may be hard to see the shaded region if the p-value is very small.  That is OK, but still provide the code to shade in the two tail areas.  You could use `scale_y_continuous(trans='log10')` if you would like to better visualize the shaded region.
+```{r}
+gt(298.88)+
+  geom_vline(aes(xintercept = -5.18), color="red", linetype="dashed") +
+  geom_t_fill(298.88, a=5.18,b=10) +
+  geom_t_fill(298.88, a=-10, b= -5.18)
+```
+

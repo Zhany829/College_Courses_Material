@@ -1,0 +1,151 @@
+---
+title: "STAT 240 Discussion 9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(tidyverse)
+library(lubridate)
+library(modelr)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Questions
+
+## Data
+
+The following code reads in the Madison weather data
+and calculates the average winter temperature (November through February) for each year and graphs the data and a fitted linear model.
+
+```{r read-data}
+## Read and transform the Madison weather data
+mw <- read_csv("../../data/madison-weather-2020-clean.csv")
+
+mw_winter <- mw %>%
+  filter(month=="Nov" | month=="Dec" | month=="Jan" | month=="Feb") %>%
+  group_by(year) %>%
+  summarize(tavg = mean(tavg))
+
+ggplot(mw_winter, aes(x=year,y=tavg)) +
+  geom_point() +
+  geom_smooth(method="lm", se=FALSE) +
+  xlab("Year") +
+  ylab("Average Winter Temperature") +
+  theme_bw()
+```
+
+## Regression Model
+
+The next block of code fits a linear model to the data and uses  functions `add_predictions()` and `add_residuals()` from the tidyverse package `modelr` to add columns `pred` and `resid` which contain predicted values and residuals, respectively.
+
+```{r fit-regression-model}
+fit <- lm(tavg ~ year, data=mw_winter) # fit linear model with y=tavg and x=year
+summary(fit)
+cf <- coef(fit) # estimated coefficients for the intercept and slope
+cf
+
+mw_winter <- mw_winter %>%
+  add_residuals(fit) %>% # add residual variable
+  add_predictions(fit) # add predicted variable
+```
+
+## Simulation to Assess Uncertainty
+
+The summary of the linear fit includes numerical values for the standard errors of the estimated model parameters.  These values are based on theoretical derivations for equations for the standard errors of the intercept and slope of a regression line.
+
+An alternative approach is to use simulation.
+Here are the steps of an approach known as the *parametric bootstrap*.
+
+1. Estimate the parameters of the statistical model.
+2. Use the estimated model and simulate a new data set of the same size.
+    - In a regression framework, this would involve adding to each predicted value $y^*$ a new simulated normally distributed random error from a distribution with mean zero and the estimated standard deviation.
+3. Fit a linear model to the simulated data set and estimate the coefficients.
+4. Repeat steps 3 and 4 many times.
+5. Calculate the standard deviations of the coefficients from the simulated data sets as estimates of the standard errors.
+
+## Problems
+
+
+### 1 
+
+Using the results of the linear model fit above, write out the estimated linear model by replacing the (a) and (b) with the estimated coefficients; y_hat represents the estimated average winter temperature in Madison for year x.  What is the interpretation of the estimated slope?
+
+y_hat = (a) + (b) * x
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+
+
+### 2
+
+Make a density plot of the residuals from the model. Calculate the mean and standard deviation of the residuals. Overlay a normal density with these values for the mean and standard deviation.
+
+Does it appear that a normal distribution is a reasonable approximation of the distribution of variation of points around the regression line?
+
+```{r}
+
+```
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+
+
+### 3
+
+Make a scatter plot with `year` on the x axis and the residuals on the y axis. Add a horizontal line with a y intercept of zero.
+
+Are there strong patterns in the residual plot, or do the residuals resemble random noise? Briefly explain.
+
+```{r}
+
+```
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+
+
+### 4
+
+The code below implements the parametric bootstrap described above.
+
+- Make density plots of the bootstrap distributions of the intercept ($b_0$) and the slope ($b_1$).  
+- Calculate the mean and standard deviation of these bootstrap distributions to three significant digits and compare with the numerical values from the linear model summary.  
+
+- Does the simulation approach agree with the original regression estimates for this data set?
+
+Note:  This simulation can be time consuming to re-run every time you knit your R Markdown file.  You can set `cache=TRUE` in your chunk header, which will avoid repeating the simulation run (unless a change is made to the chunk).  This is already done for you below, but feel free to remove the `cache = TRUE` if you prefer.
+
+```{r simulation-parametric-bootstrap, cache=TRUE}
+n <- nrow(mw_winter) # number of observations
+sigma_resid <- sd(mw_winter$resid) # sdev of residuals
+N <- 10000 # number of bootstrap samples
+b_0 <- numeric(N) # empty vector for intercepts
+b_1 <- numeric(N) # empty vector for slopes
+
+for ( i in 1:N )
+{
+  mw_temp <- mw_winter %>%
+    mutate(temp = pred + rnorm(n,0,sigma_resid)) # add normal error to predicted y
+  fit_temp <- lm(temp ~ year, data=mw_temp) # fit linear model
+  b_0[i] <- coef(fit_temp)[1] # estimated intercept
+  b_1[i] <- coef(fit_temp)[2] # estimated slope
+}
+
+df_coef <- tibble(b_0,b_1) # df of estimated coefficients
+```
+
+```{}
+
+```
+
+REPLACE THIS TEXT WITH YOUR RESPONSE
+
+
+
+
+
+
+
+

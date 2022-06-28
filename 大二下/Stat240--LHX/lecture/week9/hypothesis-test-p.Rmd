@@ -1,0 +1,391 @@
+---
+title: "Hypothesis Tests for Proportions"
+author: "Bret Larget"
+date: "10/25/2020"
+output: html_document
+---
+
+\newcommand{\given}{\,\mid\,}
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+\newcommand{\SD}{\mathsf{SD}}
+\newcommand{\SE}{\mathsf{SE}}
+\renewcommand{\prob}{\mathsf{P}}
+
+```{r setup, include=FALSE}
+## knitr options and package loading
+knitr::opts_chunk$set(echo = TRUE,
+                      message=FALSE,
+                      warning=FALSE,
+                      cache = FALSE)
+library(tidyverse)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+In the chimpanzee prosocial choice experiment,
+seven chimpanzees were involved in sessions,
+some with partners,
+and some without partners,
+where they typically made 30 choices per session
+of the prosocial or selfish tokens.
+The artificial data which matches published data summaries is here.
+
+```{r read-data}
+chimps = read_csv("../../data/chimpanzee.csv") %>%
+  mutate(with_partner = case_when(
+    partner == "none" ~ "no partner",
+    TRUE ~ "partner")) %>%
+  select(actor,partner,with_partner,everything())
+
+head(chimps)
+```
+
+Let's get the data for chimpanzee A.
+
+```{r}
+dat_a = chimps %>% 
+  filter(actor == "A") %>% 
+  filter(partner != "none") %>% 
+  summarize(x = sum(prosocial),
+            n = x + sum(selfish))
+
+dat_a
+```
+
+There are 60 prosocial choices from 90 trials.
+
+## A Statistical Model
+
+1. Name and define variables
+2. Make assumptions (these can be examined later)
+3. Write a probability model for the variables and required parameters
+
+- $X$ is the number of prosocial choices that subject A makes in 90 trials.
+- Assume:
+    - each trial could be prosocial or selfish
+    - 90 trials was predetermined
+    - trials are independent (could be debated)
+    - same probability of prosocial choice for each trial (could be debated)
+- Under these assumptions, $X$ has a binomial distribution.
+- Parameters are:
+    - $n$, the number of trials. Here $n=90$.
+    - $p$, an unknown long-run probability that this chimpanzee makes the prosocial choice.
+    
+The model is:
+
+$$
+X \given p \sim \text{Binomial}(n,p)
+$$
+
+The data is:
+
+- $n=90$
+- $x=60$
+
+## Hypothesis Tests
+
+- When finding a confidence interval, we are trying to estimate an unknown parameter, such as $p$.
+- For a *hypothesis test*, we often examine the data to see if the data is *consistent with  the parameter having a specific fixed value* versus an alternative where it is different.
+- Typically, the null hypothesis represents a condition of no effect.
+- In the chimpanzee example, it makes sense to pose these null hypothesis and alternative hypotheses.
+    - $H_0: p = 0.5$
+    - $H_a: p \neq 0.5$
+    
+- The null hypothesis is what we would expect if the chimpanzee were choosing colored tokens at random.
+- The alternative hypothesis is that the long-run probability is something other than 0.5. This difference may be interpreted as willful behavior by the chimpanzee to do something (whether acting in a pro-social or selfish way more often than expected).
+
+## Hypothesis Steps
+
+1. State the statistical model for the data
+2. State hypotheses
+3. Choose a test statistic
+4. Determine the sampling distribution of the test statistic when the null hypothesis is true.
+5. Determine which outcomes are *at last as extreme as the observed test statistic*, or *which outcomes are at least as favorable to the alternative hypothesis as the observed test statistic* and find the collective probability of these outcomes. This probability is called a *p-value*.
+6. Use the p-value to intepret the strength of evidence against the null hypothesis.
+    - Conventional choices are to call:
+        - $p < 0.05$ *statistically significant*;
+        - $p < 0.01$ *highly statistically significant*.
+7. Interpret the result in context, summarizing the statistical evidence by referring to the p-value and test.
+
+## Example
+
+Our chimpanzee made the pro-social choice 60 times out of 90.
+
+1. Model:
+
+$$
+X \given p \sim \text{Binomial}(n,p)
+$$
+
+2. State hypotheses:
+
+$$
+H_0: p = 0.5 \\
+H_a: p \neq 0.5
+$$
+
+3. Test statistic is $X$. (You might have learned to use $\hat{p}$ in an AP Stat course.)
+
+4. If the null hypothesis is true, then
+
+$$
+X \sim \text{Binomial}(90,0.5)
+$$
+
+5. Any outcome as likely or less likely than observing $X=60$ is would provide evidence against $p=0.5$ at least as strongly as the observed value.
+
+The $\text{Binomial}(90,0.5)$ distribution has mean 45 and is symmetric, which suggests outcomes 30 or smaller or 60 or higher have the same or smaller probability as $X=60$ under the null hypothesis.
+
+```{r graph-ho, fig.height=3}
+gbinom(90,0.5,scale=TRUE) +
+  geom_vline(xintercept=60,color="red",
+             linetype="dashed") +
+  theme_bw()
+```
+
+##### Check.
+
+- Because it is poor practice to check equality for continuous values, introduce a small tolerance and look for $x$ value whose probability is less than the probability of exactly 60 successes plus the tolerance.
+
+```{r extreme-x}
+tol = 1.0e-07 ## 10 ^(-7)
+x = 0:90
+## x such that the probability of x is less than or equal to P(X=60)
+##   when n=90 and p=0.5
+x_extreme = x[dbinom(x,90,0.5) < dbinom(60,90,0.5) + tol]
+x_extreme
+p_value = sum(dbinom(x_extreme,90,0.5))
+p_value
+```
+
+6. The p-value is about `r round(p_value,4)` which is about 1 in `r round(1/p_value)`. This is highly statistically significant.
+
+If the null hypothesis were true,
+we would expect to see a result this extreme only about once per every 485 experiments, yet it happenend.
+There is strong evidence that the null hypothesis is false and that the true value of $p$ is closer to the observed proportion of $\hat{p} \doteq 0.667$.
+It is more plausible that $p$ is not 0.5 and we just observed typical data than it is that $p=0.5$ and we just witnessed a very improbable outcome.
+
+7. There is very strong evidence (p=0.0021, two-sided binomial test) that the chimpanzee in this experiment will make the prosocial choice more than half the time in the experimental settings.
+
+## 7 Chimpanzees
+
+- Consider next all of the trials with partners present.
+
+#### Data Summary
+
+```{r}
+chimps1 = chimps %>% 
+  filter(with_partner == "partner") %>% 
+  group_by(actor) %>% 
+  summarize(prosocial = sum(prosocial),
+            selfish = sum(selfish),
+            n = prosocial + selfish,
+            phat = prosocial / n,
+            ptilde = (prosocial+2)/(n+4),
+            se = sqrt(ptilde*(1-ptilde)/(n+4)),
+            ci_a = ptilde - 1.96*se,
+            ci_b = ptilde + 1.96*se)
+
+chimps2 = chimps1 %>% 
+  summarize(prosocial = sum(prosocial),
+            selfish = sum(selfish),
+            n = prosocial + selfish,
+            phat = prosocial / n)
+
+library(kableExtra)
+chimps1 %>% 
+  select(actor, n, prosocial, selfish, phat) %>% 
+  mutate(phat = round(phat,3)) %>% 
+  kable() %>% 
+  kable_styling(position = "left", full_width = FALSE,
+                bootstrap_options = c("striped", "condensed"))
+
+```
+
+- The overall prosocial rate is $`r pull(chimps2,prosocial)`/`r pull(chimps2,n)` = `r round(pull(chimps2,phat),3)`$.
+
+#### Graphical Summary
+
+```{r, fig.cap = "Maximum Likelihood Estimates and Agresti-Coull 95% Confidence Intervals"}
+ggplot(chimps1) +
+  geom_pointrange(aes(x = actor, y = phat, ymin = ci_a, ymax = ci_b)) +
+  xlab("Chimpanzee Label") +
+  ylab("Prosocial Choice Probability") +
+  ggtitle("Prosocial Choice Experiment with Partners") +
+  theme_minimal()
+```
+
+### Statistical Model
+
+- Assume a binomial model for each chimpanzee with a separate value for $p_i$ for the $i$th chimpanzee where $p_i$ represent the long-run probability of selecting the prosocial token when there is a partner in the neighboring room.
+
+$$
+X_i \given p_i \sim \text{Binomial}(n_i,p_i), \quad \text{for $i=1,\ldots,7$}
+$$
+
+- Is a model that assumes that each chimpanzee has the same probability of making the prosocial choice good fit to the data?
+- Or, is there evidence in the data that the chimpanzees behave individually?
+
+## Likelihood Ratio Test
+
+- We can evaluate these two hypotheses by comparing the likelihoods.
+- The restricted (null) model says that all of the chimpanzees have the same prosocial probability $p$.
+- Under this model, there is only a single parameter $p$ to estimate and this estimate is $\hat{p} = 359/610 \doteq 0.589$.
+- The more general model has separate estimates of $\hat{p}_i$ for each chimpanzee.
+
+$$
+H_0: p_1 = \ldots = p_7 \\
+H_a: \text{not}~ p_1 = \ldots = p_7
+$$
+
+- The null hypothesis is that all of the prosocial probabilities are the same.
+- The alternative hypothesis is that they are not all the same (at least one is different).
+
+- If $L_0$ is the maximum likelihood of the data under the null hypothesis and $L_1$ is the maximum likelihood of the data under the alternative hypothesis, the likelihood ratio is $R = L_0/L_1$.
+- As likelihoods might be very small, we often take the natural log of this ratio.
+- Furthermore, we often multiply by $-2$;
+    - negative so that the log is positive because $R \le 1$.
+    - $-2$ because theory says then the ratio can be compared to a chi-square distribution.
+
+#### Calculations
+
+- Instead of calculating $R$, calculate instead $-2\ln R$.
+- This is $-2 (\ln L_0 - \ln L_1) = 2(\ln L_1 - \ln L_0)$.
+- So, we seek twice the difference in log-likelihoods.
+
+- The log-likelihood under the null hypothesis is just the sum of the logs of the binomial probabilities of obtaining the individual success counts when all $p_i$ are estimated to be $359/610$.
+
+- The log-likelihood under the alternative hypothesis is the sum of the log-likelihoods for each of the seven different binomial probabilities, each with its own estimate of $p$.
+
+- We can use the `log` argument to `dbinom()` to return the log of the probability instead of the probability itself.
+
+- Use `dplyr` code to do the calculations.
+
+```{r LRT-calculations}
+dat = chimps1 %>%
+  mutate(p_0 = sum(prosocial)/sum(n)) %>%
+  mutate(log_L0 = dbinom(prosocial,n,p_0,log=TRUE),
+         log_L1 = dbinom(prosocial,n,phat,log=TRUE))
+
+lrt = dat %>%
+  summarize(log_L0 = sum(log_L0),
+            log_L1 = sum(log_L1),
+            lrt = 2*(log_L1 - log_L0),
+            R = exp(log_L0-log_L1))
+lrt
+```
+
+### Chi-square approach to the p-value
+
+- Theory says that if the sample sizes are large enough, then the sampling distribution of the LRT statistic has an approximate chi-square distribution with degrees of freedom equal to the difference in the number of free parameters between the two hypotheses.
+- Here the null hypothesis has 1 free parameter to estimate.
+- The alternative hypothesis has 7.
+- So, we want to compare to a chi-square distribution with 6 degrees of freedom.
+    - This is the distribution you would get by taking 6 independent standard normal random variables, squaring them, and summing up the squared values.
+    - The mean is the number of degrees of freedom, here 6.
+    - The standard deviation is the square root of twice the degrees of freedom, or here $\sqrt{12} \doteq 3.46$.
+    - The p-value is always the area to the right, as when the statistic is larger, the likelihood under the alternative model is even higher than the null, lending more evidence against the null hypothesis in favor of the alternative hypothesis.
+
+```{r chisq-p-value}
+gchisq(6) +
+  geom_chisq_fill(df=6, a=lrt$lrt) +
+  xlab("") +
+  theme_bw()
+
+## calculate the p-value
+lrt = lrt %>%
+  mutate(p_value = 1 - pchisq(lrt,6))
+
+lrt
+```
+
+- The p-value is not significant.
+    - We would expect a result at least this extreme about once every 7 experiments.
+    - If I guessed the day of the week you were born and I got it right, would you be surprised?
+    - A little bit, but a 1 in 7 chance is not that unusual.
+    
+### Conclusion
+
+> The observed data is consistent with all seven chimpanzees having the same probability of making the prosocial choice when there is a partner ($p=0.144$, $G = 9.56$, likelihood ratio test).
+
+### Randomization Test
+
+- Rather than relying on theory, we instead could calculate a p-value by simulating the sampling distribution of the LRT statistic, *assuming that the null hpothesis is true* (you should hear a bell ringing).
+
+- Write a function to do the work.
+
+```{r lrt-randomization, cache = TRUE, eval = TRUE}
+## df should have columns
+## - prosocial,
+## - selfish, and
+## - n
+
+lrt_stat = function(df)
+{
+  df = df %>%
+    mutate(p_0 = sum(prosocial)/sum(n),
+           p_hat = prosocial/n,
+           log_L0 = dbinom(prosocial,n,p_0,log=TRUE),
+           log_L1 = dbinom(prosocial,n,p_hat,log=TRUE)) %>%
+    summarize(lrt = 2*(sum(log_L1) - sum(log_L0)))
+  return( df$lrt )
+}
+
+## This function is much faster
+lrt_stat_vector = function(df)
+{
+  x = df$prosocial
+  n = df$n
+  p_0 = sum(x)/sum(n)
+  p_hat = x/n
+  log_L0 = sum(dbinom(x,n,p_0,log=TRUE))
+  log_L1 = sum(dbinom(x,n,p_hat,log=TRUE))
+  return( 2*(log_L1 - log_L0) )
+}
+
+## Test the time for the dplyr and vector versions of the
+##   functions to calculate the test statistic
+
+system.time( {for(i in 1:1000) lrt_stat(chimps1)} )
+system.time( {for(i in 1:1000) lrt_stat_vector(chimps1)} )
+
+lrt_randomization = function(df, N=10000)
+{
+  m = nrow(df)
+  p_0 = df %>%
+    summarize(p_0 = sum(prosocial)/sum(n)) %>%
+    pull(p_0)
+  
+  lrt = numeric(N)
+  for ( i in 1:N )
+  {
+    df_rand = df %>%
+      mutate(prosocial = rbinom(m,n,p_0))
+    lrt[i] = lrt_stat_vector(df_rand)
+  }
+  return( lrt )
+}
+
+lrt = chimps1 %>%
+  select(prosocial,n) %>%
+  lrt_randomization()
+
+lrt_0 = lrt_stat(chimps1)
+p_value = mean(lrt >= lrt_0)
+signif(p_value,4)
+
+## Compare
+signif(1 - pchisq(lrt_0,6),4)
+
+## Check plot
+df_lrt = tibble(lrt)
+
+ggplot(df_lrt, aes(x=lrt)) +
+  geom_density() +
+  geom_chisq_fill(df=6,a=lrt_0) +
+  geom_chisq_density(df=6) +
+  theme_bw()
+```
+
+- We see that the randomization distribution is a close fit to the theoretical value.

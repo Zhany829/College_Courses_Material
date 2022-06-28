@@ -1,0 +1,120 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+library(tidyverse)
+library(lubridate)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+## Homework 9
+
+#### Due Friday, April 2, 11:59 PM CT
+
+### Problems
+
+### 1
+
+- Read in the `chimpanzee.csv` data file.  
+-  Consider only those trials with a partner.
+-  Make an assumption that there is a universal $p_{\text{partner}}$ representing the probability any chimpanzee would make a prosocial choice in a single trial under the experimental conditions we have been examining.  
+- Assume that all trials are independent.  
+```{r}
+chimpanzee <- read_csv("../../data/chimpanzee.csv")
+with_partner <- chimpanzee%>%
+  filter(partner != "none")
+```
+*(a)* Under these assumptions, write down a statistical model for $X_1$, the total number of prosocial choices made with a partner present in this experiment.
+```{r}
+with_partner%>%
+  summarize(
+    prosocial = sum(prosocial)
+  )
+```
+*(b)* Test the hypothesis that $p_{\text{partner}} = 0.5$ versus the two-sided alternative.  Report a p-value.
+```{r}
+with_partner<-with_partner %>%
+  summarise(prosocial=sum(prosocial),
+            selfish=sum(selfish),
+            total=prosocial+selfish,
+            p = prosocial/total)
+tol <- 1.0e-07
+x <- 0:with_partner$total
+x_extreme <- x[dbinom(x,with_partner$total,0.5) < dbinom(with_partner$prosocial,with_partner$total,0.5)+tol]
+p_value <- sum(dbinom(x_extreme,with_partner$total,0.5))
+p_value
+```
+*(c)*  Create a graph that shows the sampling distribution of $X_1$ under the null hypothesis and indicates (with different colors and/or lines) how the p-value relates to the graph.
+
+```{r}
+gbinom(with_partner$total, 0.5, scale = TRUE,size=0.5) +
+  geom_vline(xintercept = with_partner$prosocial, color = "red", linetype = "dashed") +
+  geom_vline(xintercept = 610 * 0.5 + (610 * 0.5 - with_partner$prosocial), color = "red", linetype = "dashed")
+```
+*(d)* Interpret the results of the hypothesis test in context.
+-The p_value is 1.405895e-05, which is less than 0.05, which is statistically significant. There is strong evidence that the null hypothesis is wrong, and the true value of p is closer to the observed ratio of p^≈0.589=359/610. p is not 0.5, we just observed typical data, which is more credible than p=0.5, we saw a very unlikely result. There is very strong evidence (p≈0.000014, two-sided binomial test) that in an experimental environment, chimpanzees will make pro-social choices more than half of the time. 
+
+
+### 2
+
+Repeat the previous problem, but use the data for all trials **without** a partner for an assumed universal parameter $p_{\text{no partner}}$, using a statistical model for $X_2$, the total number of prosocial choices made without a partner present in the experiment.
+```{r}
+without_partner <- chimpanzee%>%
+  filter(partner=="none")%>%
+  summarise(
+    prosocial = sum(prosocial),
+    selfish = sum(selfish),
+    total = prosocial + selfish,
+    p = prosocial / total
+  )
+without_partner
+x2 <- 0:without_partner$total
+x_extreme2 <- x[dbinom(x2,without_partner$total,0.5) < dbinom(without_partner$prosocial,without_partner$total,0.5)+tol]
+p_value2 <- sum(dbinom(x_extreme2,without_partner$total,0.5))
+p_value2
+gbinom(without_partner$total,0.5,scale=TRUE,size=0.5)+
+  geom_vline(xintercept = 180 * 0.5 + (180 * 0.5 - 82), color = "red", linetype = "dashed")+
+  geom_vline(xintercept = without_partner$prosocial,color="red",linetype="dashed",size=0.5)+
+  theme_bw()
+```
+- Suppose the number of prosocial behaviors among chimpanzees without a partner $X_1$ is a binomial distribution with n samples and a long-run probability of chimpanzees’ prosocial behavior p.
+$X_2 \sim \text{Binomial}(n, p_{\text{no_partner}})$
+- This case make hypothesis $H_0=0.5$ and $H_a\not=0.5$
+- And we have statistic $n=180$, $p_{\text{no_partner}}=0.5$, so that 
+$X_2 \sim \text{Binomial}(180,0.5)$
+- p-value = 0.3325791
+- Since the p-value > 0.05, it fails to reject the null hypothesis. There is no evidence in this sample of data to suggest that we should reject the null hypothesis that the probability of choosing a prosocial choice without a partner is 0.5.
+
+### 3
+
+State two criticisms of the assumptions made for the previous two hypothesis tests where reality may differ from the assumptions, possibly leading to misleading conclusions.
+
+- The test does not control all the variate, the color of tokens may also affect choices by chimpanzees, so each trails may not be independent.
+- The sample size of the test is still not large enough so the conclusion may not apply to universal situation.
+
+### 4
+
+In questions 1 and 2, we considered two population proportions:  $p_{\text{partner}}$ and $p_{\text{no partner}}$.  It is sometimes of interest to estimate the *difference* in sample proportions rather than just the individual population proportions.  Confidence intervals can be defined for this purpose.
+
+*(a)*  Using the Wald estimates, define an 80% confidence for the difference in the population proportions $p_{\text{partner}} - p_{\text{no partner}}$.
+```{r}
+chimp <- chimpanzee %>%
+  mutate(with_partner=case_when(partner!="none"~"TRUE",TRUE~"FALSE"))%>%
+  group_by(with_partner)%>%
+  summarise(prosocial = sum(prosocial),
+            selfish = sum(selfish),
+            n = prosocial + selfish,
+            p_hat = prosocial / n,
+            se = sqrt(p_hat * (1-p_hat)/n))
+chimp
+est_c_diff <- chimp$p_hat[2] - chimp$p_hat[1]
+se_c_diff<-sqrt(chimp$se[2]^2 + chimp$se[1]^2)
+z <- abs(qnorm((1-0.8)/2))
+ci_c_diff<-est_c_diff + c(-1,1)*z*se_c_diff
+ci_c_diff
+```
+*(b)*  Interpret the estimated confidence interval in context.
+- The 80% confidence interval for the difference extends from the pro-social probability with a partner being anywhere from 7.33% lower to 18.14% higher than the pro-social choice without a partner.
